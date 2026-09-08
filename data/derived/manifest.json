@@ -1,0 +1,18 @@
+{
+  "source": "gsi_dem",
+  "derived_from": "国土地理院 標高タイル",
+  "credit": "国土地理院の標高データを加工して作成",
+  "license": "国土地理院コンテンツ利用規約",
+  "generated_at": "2026-09-08",
+  "zoom": 14,
+  "radius_m": 1000.0,
+  "records": 2805,
+  "tile_layers": {
+    "dem5a_png": 11189,
+    "dem5b_png": 1319,
+    "dem_png": 10483,
+    "none": 36,
+    "dem5c_png": 335
+  },
+  "records_with_missing_pixels": 243
+}

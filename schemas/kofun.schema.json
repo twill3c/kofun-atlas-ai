@@ -110,7 +110,24 @@
         "bunka_id": {"type": ["string", "null"]}
       }
     },
-    "terrain": {"type": "object"},
+    "terrain": {
+      "type": "object",
+      "description": "国土地理院の標高データを加工して作成した派生値。欠測は null で保持し 0 で埋めない。",
+      "properties": {
+        "elevation_m": {"type": ["number", "null"], "minimum": -500, "maximum": 4000},
+        "slope_deg": {"type": ["number", "null"], "minimum": 0, "maximum": 90},
+        "aspect_deg": {"type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360},
+        "local_relief_250m": {"type": ["number", "null"], "minimum": 0},
+        "local_relief_500m": {"type": ["number", "null"], "minimum": 0},
+        "local_relief_1000m": {"type": ["number", "null"], "minimum": 0},
+        "relative_elevation_500m": {"type": ["number", "null"]},
+        "tri": {"type": ["number", "null"], "minimum": 0},
+        "openness_500m": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "dem_zoom": {"type": ["integer", "null"], "minimum": 0, "maximum": 20},
+        "dem_layers": {"type": "object", "additionalProperties": {"type": "integer"}},
+        "dem_missing_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      }
+    },
     "ai": {"type": "object"},
     "external_ids": {"type": "object"},
     "raw_extra": {"type": "object"},

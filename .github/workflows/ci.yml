@@ -41,6 +41,9 @@ jobs:
       - run: python scripts/fetch_geoshape.py
       - run: python scripts/normalize.py
       - run: python scripts/geocode_records.py
+      # 地形特徴は派生値を同梱しているので、標高タイルの取得は起きない。
+      # 取得と算出(fetch_dem.py / terrain_features.py)はローカル専用。
+      - run: python scripts/apply_terrain.py
       - run: python scripts/build_web_assets.py
 
       # 生成物が無いときの skip を CI では落ちるようにする(skip は緑と見分けが付かない)。

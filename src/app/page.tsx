@@ -45,11 +45,30 @@ export default function Home() {
               <>（未確定 {nf.format(counts.without_muni_cd)} 件）</>
             )}
           </li>
+          <li>
+            地形（標高・傾斜・起伏）: {nf.format(counts.with_elevation)} 件
+          </li>
           <li>墳形あり: {nf.format(counts.with_mound_type)} 件</li>
           <li>築造時期あり: {nf.format(counts.with_chronology)} 件</li>
         </ul>
         <p className="note">地図・類似検索・AI 分析はこれから実装します。</p>
       </div>
+
+      {counts.with_elevation > 0 && (
+        <div className="card">
+          <h2>地形</h2>
+          <p className="note">
+            国土地理院の標高タイルから、各古墳の周囲 ±1,000 m を見て
+            標高・傾斜・方位・局所起伏（250 / 500 / 1,000 m）・相対標高・
+            地形の粗さを算出しています。
+          </p>
+          <p className="note">
+            水面には標高がないので、そこは<strong>空のまま</strong>にしてあります。
+            0 で埋めると「標高 0 m の崖」が生まれ、起伏が実際より大きく出ます。
+            島や海沿いの古墳では周囲の多くが水面になります。
+          </p>
+        </div>
+      )}
 
       {topPrefectures.length > 0 && (
         <div className="card">

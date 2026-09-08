@@ -26,6 +26,7 @@ PROCESSED = ROOT / "data" / "processed" / "kofun.json"
 INTERIM = ROOT / "data" / "interim" / "kofun_l0.json"
 GEOSHAPE_MANIFEST = ROOT / "data" / "raw" / "geoshape" / "manifest.json"
 GSI_MANIFEST = ROOT / "data" / "raw" / "gsi" / "manifest.json"
+TERRAIN_MANIFEST = ROOT / "data" / "derived" / "manifest.json"
 OUT = ROOT / "public" / "data" / "data-manifest.json"
 
 
@@ -65,6 +66,21 @@ def main() -> int:
             }
         )
 
+    if TERRAIN_MANIFEST.exists():
+        terrain = json.loads(TERRAIN_MANIFEST.read_text(encoding="utf-8"))
+        sources.append(
+            {
+                "id": terrain["source"],
+                "role": "地形特徴(標高・傾斜・起伏)",
+                "retrieved_at": terrain["generated_at"],
+                "license": terrain["license"],
+                "credit": terrain["credit"],
+                "zoom": terrain["zoom"],
+                "radius_m": terrain["radius_m"],
+            }
+        )
+        stage = "L2"
+
     manifest = {
         "version": dt.date.today().isoformat(),
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -90,6 +106,12 @@ def main() -> int:
                 for r in rows
                 if r.get("muni_cd")
                 and int(r["muni_cd"][:2]) != int(r["raw_extra"]["geoshape_pref_code"])
+            ),
+            "with_elevation": sum(
+                1 for r in rows if (r.get("terrain") or {}).get("elevation_m") is not None
+            ),
+            "with_slope": sum(
+                1 for r in rows if (r.get("terrain") or {}).get("slope_deg") is not None
             ),
         },
         "prefectures": dict(

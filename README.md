@@ -9,9 +9,14 @@
 
 ## いまの状態
 
-**L1（座標からの行政区画確定）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
-46 都道府県。地図・類似検索・AI 分析はこれから実装する。
+**L2（地形特徴）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
+46 都道府県、地形特徴 2,804 件。地図・類似検索・AI 分析はこれから実装する。
 進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+
+地形は国土地理院の標高タイル（z14・±1,000 m の窓）から算出している。
+**層は画素単位で合成する** — DEM5A はタイルが存在しても中身の大半が NoData の
+ことがあり、必要タイル 6,597 枚のうち 6,213 枚（94.2%）が二層以上の重ね合わせを
+必要とした（[SPEC.md](SPEC.md) §3.5）。水面には標高がないので `null` のまま残す。
 
 都道府県は元データの県名・県コードではなく**座標から国土地理院の逆ジオコーダで確定**している。
 元データではこの二欄が食い違っており、しかもどちらが正しいかは行ごとに違った
@@ -74,6 +79,7 @@ py -3.14 -m venv .venv          # Windows。他所では python3 -m venv .venv
 ./.venv/Scripts/python.exe scripts/fetch_geoshape.py     # 取得 + manifest（既にあれば sha 検査のみ）
 ./.venv/Scripts/python.exe scripts/normalize.py          # → data/interim/kofun_l0.json
 ./.venv/Scripts/python.exe scripts/geocode_records.py    # → data/processed/kofun.json
+./.venv/Scripts/python.exe scripts/apply_terrain.py      # 同梱の地形特徴を載せる
 ./.venv/Scripts/python.exe scripts/build_web_assets.py   # → public/data/data-manifest.json
 ```
 
@@ -84,6 +90,15 @@ CI もクローンも国土地理院を一度も叩かずに同じ結果を再�
 
 ```bash
 ./.venv/Scripts/python.exe scripts/fetch_revgeo.py
+```
+
+地形特徴も同じ考え方で、派生値（`data/derived/terrain.jsonl`）だけを同梱している。
+**全国 DEM そのものは再配布しない。** 標高タイルを取り直して計算し直すのは
+座標を足したときだけで、その場合は次を走らせる（キャッシュは約 550 MB になる）。
+
+```bash
+./.venv/Scripts/python.exe scripts/fetch_dem.py          # タイルを取得(ローカルのみ)
+./.venv/Scripts/python.exe scripts/terrain_features.py   # → data/derived/terrain.jsonl
 ```
 
 Wikidata と文化庁は**人手スナップショット**である。手順は

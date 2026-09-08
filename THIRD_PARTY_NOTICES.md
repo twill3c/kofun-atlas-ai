@@ -37,9 +37,16 @@ https://www.gsi.go.jp/
 同梱: `data/raw/gsi/muni.js`（市区町村表）と `data/raw/gsi/revgeo.jsonl`
 （古墳座標に対する逆ジオコーディング結果・2026-09-08 取得）。
 
-全国 DEM そのものは再配布しない。リポジトリに入るのは派生した特徴量と、
-検査用に 1 枚だけ置いた標高タイル
-（`tests/fixtures/dem5a_15_29011_12939.png`、富士山頂を含む DEM5A z15 タイル）である。
+全国 DEM そのものは再配布しない。リポジトリに入るのは次の三つだけである。
+
+- `data/derived/terrain.jsonl` — 各古墳の座標に対する地形特徴量（標高・傾斜・方位・
+  局所起伏・相対標高・地形の粗さ）。国土地理院の標高タイルを加工して作成
+- `data/raw/gsi/revgeo.jsonl` — 座標に対する逆ジオコーディング結果
+- `tests/fixtures/dem5a_15_29011_12939.png` — 検査用に 1 枚だけ置いた標高タイル
+  （富士山頂を含む DEM5A z15）
+
+標高タイルのローカルキャッシュ（`data/raw/gsi-cache/`、約 550 MB）は
+`.gitignore` で除外している。
 
 ## 文化庁 / Agency for Cultural Affairs
 

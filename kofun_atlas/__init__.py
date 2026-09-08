@@ -4,4 +4,4 @@
 探索で書いた規則を実装へ「写す」のではなく、ここへ昇格させて一箇所に置く(HC-069)。
 """
 
-__all__ = ["dem", "geocode", "geoshape", "ids", "records", "schema"]
+__all__ = ["dem", "geocode", "geoshape", "ids", "records", "schema", "terrain"]
