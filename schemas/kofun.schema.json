@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kofun-atlas-ai.vercel.app/schemas/kofun.schema.json",
+  "title": "KofunRecord",
+  "description": "構想書 §8 を SPEC §8 で運用化したもの。prefecture / municipality は L1 の逆ジオコーディングで確定するため、キーは必須だが値は null を許す(SPEC §3.2)。",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "prefecture",
+    "municipality",
+    "location",
+    "chronology",
+    "mound",
+    "quality",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^kofun_[a-f0-9]{10}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name_kana": {
+      "type": ["string", "null"]
+    },
+    "aliases": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "prefecture": {
+      "type": ["string", "null"]
+    },
+    "municipality": {
+      "type": ["string", "null"]
+    },
+    "muni_cd": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{5}$"
+    },
+    "location": {
+      "type": "object",
+      "required": ["lat", "lon", "accuracy", "source"],
+      "properties": {
+        "lat": {"type": "number", "minimum": 20, "maximum": 50},
+        "lon": {"type": "number", "minimum": 120, "maximum": 155},
+        "accuracy": {
+          "enum": ["surveyed", "point", "approximate", "municipality", "unknown"]
+        },
+        "accuracy_m": {"type": ["number", "null"], "minimum": 0},
+        "source": {"type": "string", "minLength": 1}
+      }
+    },
+    "chronology": {
+      "type": "object",
+      "required": ["source_kind"],
+      "properties": {
+        "period_label": {"type": ["string", "null"]},
+        "year_min": {"type": ["integer", "null"], "minimum": 150, "maximum": 900},
+        "year_max": {"type": ["integer", "null"], "minimum": 150, "maximum": 900},
+        "source_kind": {
+          "enum": ["published", "parsed", "derived", "ai", "unknown"]
+        },
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+      }
+    },
+    "mound": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "zenpo_koen",
+            "zenpo_koho",
+            "enpun",
+            "hofun",
+            "hotate",
+            "other",
+            "unknown"
+          ]
+        },
+        "length_m": {"type": ["number", "null"], "minimum": 0, "maximum": 1000},
+        "width_m": {"type": ["number", "null"], "minimum": 0, "maximum": 1000},
+        "height_m": {"type": ["number", "null"], "minimum": 0, "maximum": 200},
+        "moat": {"type": ["boolean", "null"]},
+        "fukiishi": {"type": ["boolean", "null"]},
+        "haniwa": {"type": ["boolean", "null"]}
+      }
+    },
+    "burial": {
+      "type": "object",
+      "properties": {
+        "chamber_type": {"type": ["string", "null"]},
+        "coffin_type": {"type": ["string", "null"]}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {"type": ["boolean", "null"]}
+    },
+    "heritage": {
+      "type": "object",
+      "properties": {
+        "designation": {"type": ["string", "null"]},
+        "designation_date": {"type": ["string", "null"]},
+        "bunka_id": {"type": ["string", "null"]}
+      }
+    },
+    "terrain": {"type": "object"},
+    "ai": {"type": "object"},
+    "external_ids": {"type": "object"},
+    "raw_extra": {"type": "object"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["source", "retrieved_at"],
+        "properties": {
+          "source": {"type": "string", "minLength": 1},
+          "retrieved_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "required": ["source_tier", "completeness", "review_status"],
+      "properties": {
+        "source_tier": {"enum": ["A", "B", "C", "D"]},
+        "completeness": {"type": "number", "minimum": 0, "maximum": 1},
+        "entity_match_confidence": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "review_status": {
+          "enum": [
+            "pending_geocode",
+            "auto_accepted",
+            "manual_review",
+            "separate_records"
+          ]
+        },
+        "flags": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["source", "url", "license", "retrieved_at"],
+        "properties": {
+          "source": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "minLength": 1},
+          "license": {"type": "string", "minLength": 1},
+          "credit": {"type": "string"},
+          "retrieved_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kofun-atlas-ai"
+version = "0.1.0"
+description = "公開データだけで作る古墳の時空間・地形・AI 分析アトラス"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+  "numpy>=2.0",
+  "pillow>=10",
+  "requests>=2.31",
+  "jsonschema>=4.20",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["kofun_atlas"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "unit: 外部に触れない単体検査",
+  "integration: 外部ネットワークに触れる検査(KOFUN_ALLOW_NETWORK=1 のときだけ)",
+  "validation: 実データ・文書に対する検査",
+]

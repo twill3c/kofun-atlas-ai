@@ -1,0 +1,29 @@
+{
+  "version": "2026-09-08",
+  "generated_at": "2026-09-08T13:00:35+09:00",
+  "stage": "L0",
+  "shipped": false,
+  "counts": {
+    "geoshape_rows": 2808,
+    "merged_duplicate_rows": 3,
+    "records": 2805,
+    "with_prefecture": 0,
+    "with_coordinates": 2805,
+    "with_mound_type": 0,
+    "with_chronology": 0
+  },
+  "review_status": {
+    "pending_geocode": 2805
+  },
+  "sources": [
+    {
+      "id": "geoshape",
+      "source_version": "2025-05-15",
+      "retrieved_at": "2026-09-08",
+      "license": "CC BY 4.0",
+      "credit": "『日本歴史地名大系』施設・地点項目データセット(CODH作成) doi:10.20676/00000456",
+      "sha256": "d4cd6bebb27378a57545829a30249439a7d2a30c68f280e669faef1f32a3d9c6"
+    }
+  ],
+  "model_version": null
+}

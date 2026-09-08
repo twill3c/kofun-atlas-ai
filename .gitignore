@@ -1,0 +1,23 @@
+.venv/
+node_modules/
+.next/
+.env*
+!.env.example
+__pycache__/
+.pytest_cache/
+*.egg-info/
+tsconfig.tsbuildinfo
+
+# 派生データ。data/raw から再生成できる
+data/interim/
+data/processed/
+
+# 標高タイルのローカルキャッシュ(再配布しない — 構想書 §2.4)
+data/raw/gsi-cache/
+
+artifacts/
+*.pt
+*.pth
+
+# 書き出したブラウザ用モデルは明示的に残す
+!public/models/*.onnx

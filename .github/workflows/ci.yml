@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -e ".[dev]"
+
+      # 出荷物を作る工程を CI でも一度通す。
+      # CSV はリポジトリに入っているので取得は起きない。
+      # このステップは sha256 の一致を確かめる整合検査として働く。
+      - run: python scripts/fetch_geoshape.py
+      - run: python scripts/normalize.py
+      - run: python scripts/build_web_assets.py
+
+      - run: python -m pytest -q
+      - run: python harness/text_hygiene.py
+
+  loop-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate loop logs
+        run: python harness/looplog.py validate

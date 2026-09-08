@@ -1,0 +1,11 @@
+{
+  "source": "geoshape",
+  "url": "https://geoshape.ex.nii.ac.jp/nrct-poi/dataset/nrct-poi-20250515.csv",
+  "source_version": "2025-05-15",
+  "retrieved_at": "2026-09-08",
+  "license": "CC BY 4.0",
+  "credit": "『日本歴史地名大系』施設・地点項目データセット(CODH作成) doi:10.20676/00000456",
+  "bytes": 5576569,
+  "sha256": "d4cd6bebb27378a57545829a30249439a7d2a30c68f280e669faef1f32a3d9c6",
+  "kofun_candidates": 2808
+}

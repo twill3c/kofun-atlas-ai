@@ -1,0 +1,108 @@
+:root {
+  --bg: #12100d;
+  --panel: #1b1815;
+  --line: #3a332b;
+  --ink: #f2ece1;
+  --dim: #a89c88;
+  --accent: #c8813a;
+  --footer-h: 42px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui,
+    sans-serif;
+  line-height: 1.7;
+}
+
+main {
+  padding-bottom: calc(var(--footer-h) + 16px);
+}
+
+a {
+  color: var(--accent);
+}
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 20px 0;
+}
+
+h1 {
+  font-size: clamp(22px, 4vw, 32px);
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+
+.lede {
+  color: var(--dim);
+  margin: 0 0 28px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+}
+
+.card h2 {
+  font-size: 15px;
+  margin: 0 0 8px;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.card p,
+.card li {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.card ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* fleet: fixed footer */
+.fleet-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  background: rgba(18, 16, 13, 0.9);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--dim);
+  backdrop-filter: blur(4px);
+}
+.fleet-footer a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.fleet-footer a:hover {
+  text-decoration: underline;
+}
