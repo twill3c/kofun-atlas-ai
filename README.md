@@ -9,8 +9,14 @@
 
 ## いまの状態
 
-**L0（立ち上げ）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）。
-地図・類似検索・AI 分析はこれから実装する。進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+**L1（座標からの行政区画確定）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
+46 都道府県。地図・類似検索・AI 分析はこれから実装する。
+進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+
+都道府県は元データの県名・県コードではなく**座標から国土地理院の逆ジオコーダで確定**している。
+元データではこの二欄が食い違っており、しかもどちらが正しいかは行ごとに違った
+（[SPEC.md](SPEC.md) §3.2）。県コードを信じると沖縄県に 11 基の古墳が現れるが、
+実際は 11 件とも鹿児島県である。
 
 数値は `public/data/data-manifest.json` から画面へ流しており、
 README のこの段落は手で書いた要約である（実測値は manifest が正本）。
@@ -67,7 +73,17 @@ py -3.14 -m venv .venv          # Windows。他所では python3 -m venv .venv
 ```bash
 ./.venv/Scripts/python.exe scripts/fetch_geoshape.py     # 取得 + manifest（既にあれば sha 検査のみ）
 ./.venv/Scripts/python.exe scripts/normalize.py          # → data/interim/kofun_l0.json
+./.venv/Scripts/python.exe scripts/geocode_records.py    # → data/processed/kofun.json
 ./.venv/Scripts/python.exe scripts/build_web_assets.py   # → public/data/data-manifest.json
+```
+
+逆ジオコーディングの結果（`data/raw/gsi/revgeo.jsonl`）と国土地理院の市区町村表
+（`data/raw/gsi/muni.js`）はリポジトリに同梱してある。**再取得は不要**で、
+CI もクローンも国土地理院を一度も叩かずに同じ結果を再現できる。
+座標を足したときだけ次を走らせる（追記のみ・途中で落ちても再開できる）。
+
+```bash
+./.venv/Scripts/python.exe scripts/fetch_revgeo.py
 ```
 
 Wikidata と文化庁は**人手スナップショット**である。手順は

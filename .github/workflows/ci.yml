@@ -21,6 +21,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
 
   python:
@@ -39,9 +40,13 @@ jobs:
       # このステップは sha256 の一致を確かめる整合検査として働く。
       - run: python scripts/fetch_geoshape.py
       - run: python scripts/normalize.py
+      - run: python scripts/geocode_records.py
       - run: python scripts/build_web_assets.py
 
+      # 生成物が無いときの skip を CI では落ちるようにする(skip は緑と見分けが付かない)。
       - run: python -m pytest -q
+        env:
+          KOFUN_REQUIRE_ARTIFACTS: "1"
       - run: python harness/text_hygiene.py
 
   loop-verify:

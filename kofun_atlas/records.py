@@ -10,11 +10,12 @@ L0 の出力は暫定であり、`data/interim/` に置いて出荷しない。
 
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 from typing import Any, Iterable
 
-from . import geoshape, ids
+from . import geocode, geoshape, ids
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 GEOSHAPE_MANIFEST = PROJECT_ROOT / "data" / "raw" / "geoshape" / "manifest.json"
@@ -51,6 +52,24 @@ def geoshape_retrieved_at(manifest_path: pathlib.Path | None = None) -> str:
     if not retrieved:
         raise ValueError(f"{path} に retrieved_at が無い")
     return retrieved
+
+
+def uses_forbidden_source(
+    record: dict[str, Any], forbidden: Iterable[str]
+) -> bool:
+    """禁止ソース由来の値が混ざっていないか(SPEC §7 G-11)。
+
+    `sources` だけを見ると、値ごとの `provenance` に紛れた出所を素通りする。
+    両方を見る。
+    """
+    banned = set(forbidden)
+    for source in record.get("sources") or []:
+        if source.get("source") in banned:
+            return True
+    for entry in (record.get("provenance") or {}).values():
+        if isinstance(entry, dict) and entry.get("source") in banned:
+            return True
+    return False
 
 
 def has_licensed_source(record: dict[str, Any]) -> bool:
@@ -191,3 +210,49 @@ def normalize_all(
         )
 
     return list(merged.values())
+
+
+def apply_geocode(
+    record: dict[str, Any],
+    *,
+    muni_entry: "geocode.MuniEntry | None",
+    lv01: str | None,
+    retrieved_at: str,
+) -> dict[str, Any]:
+    """逆ジオコーディングの結果を当てて、県・市区町村と内部 ID を確定する。
+
+    答えが無かった点(陸上でない座標)は捨てない。`null` のまま残し、
+    `review_status` を `manual_review` にして人が見る対象として数える。
+    """
+    out = copy.deepcopy(record)
+
+    if muni_entry is None:
+        out["quality"]["review_status"] = "manual_review"
+        flags = out["quality"].setdefault("flags", [])
+        if "Q10" not in flags:
+            flags.append("Q10")  # 位置は分かるが行政区画に落ちなかった
+        return out
+
+    out["prefecture"] = muni_entry.pref_name
+    out["municipality"] = muni_entry.muni_name
+    out["muni_cd"] = muni_entry.muni_cd
+    if lv01 and lv01 not in ("-", "−", "―"):
+        out["raw_extra"]["gsi_lv01Nm"] = lv01
+
+    for field in ("prefecture", "municipality", "muni_cd"):
+        out["provenance"][field] = {
+            "source": geocode.SOURCE_ID,
+            "retrieved_at": retrieved_at,
+        }
+
+    out["quality"]["review_status"] = "auto_accepted"
+    out["quality"]["flags"] = [f for f in out["quality"].get("flags", []) if f != "Q11"]
+    out["id"] = ids.kofun_id(
+        name=out["name"],
+        prefecture=out["prefecture"],
+        municipality=out["municipality"],
+        lat=out["location"]["lat"],
+        lon=out["location"]["lon"],
+    )
+    out["quality"]["completeness"] = completeness(out)
+    return out

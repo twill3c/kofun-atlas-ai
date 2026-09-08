@@ -1,0 +1,10 @@
+{
+  "source": "gsi_revgeo",
+  "url": "https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress",
+  "muni_table_url": "https://maps.gsi.go.jp/js/muni.js",
+  "retrieved_at": "2026-09-08",
+  "license": "国土地理院コンテンツ利用規約",
+  "credit": "出典：国土地理院ウェブサイト",
+  "coordinates": 2705,
+  "unresolved": 0
+}
