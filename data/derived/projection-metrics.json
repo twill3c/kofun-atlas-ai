@@ -1,0 +1,10 @@
+{
+  "method": "t-SNE",
+  "seed": 42,
+  "records": 2805,
+  "n_neighbors": 20,
+  "trustworthiness": 0.9796083314139562,
+  "trustworthiness_pca2": 0.8114601497146312,
+  "trustworthiness_shuffled": 0.5006981200383297,
+  "seconds": 53.3
+}

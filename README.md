@@ -9,9 +9,13 @@
 
 ## いまの状態
 
-**L3（立地の埋め込み）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
-46 都道府県、地形特徴 2,804 件、立地の埋め込み 2,805 件。
+**L4（二次元配置）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
+46 都道府県、地形特徴 2,804 件、立地の埋め込みと二次元配置 2,805 件。
 地図と探索画面はこれから実装する。進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+
+> **クラスタリングは測って落とした。** どの設定でもノイズ率が 50% を超え
+> （`min_cluster_size=30` で 92.5%）、全体を群に切れなかった。立地は連続していて
+> はっきりした型に分かれない、というのが実測の結果である。詳細は [SPEC.md](SPEC.md) §3.11。
 
 > **AI が扱うのは「立地」だけである。**
 > 墳形・墳丘長・築造時期・出土品は、再配布できる公開データでは 1 件も埋まっていない
@@ -120,6 +124,7 @@ Wikidata と文化庁は**人手スナップショット**である。手順は
 ./.venv/Scripts/python.exe ml/train_encoder.py     # → public/data/embeddings.json
 ./.venv/Scripts/python.exe ml/export_onnx.py       # → public/models/kofun_encoder.onnx
 ./.venv/Scripts/python.exe ml/model_card.py        # → public/models/model-card.md
+./.venv/Scripts/python.exe ml/build_projection.py  # → public/data/projection.json
 ```
 
 再現性の確認（手元専用・出力は同梱しない）:

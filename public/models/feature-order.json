@@ -13,6 +13,7 @@
     "log_nearest_kofun_m",
     "kofun_within_1km",
     "kofun_within_5km",
+    "shares_coordinates",
     "is_group",
     "aspect_is_missing",
     "terrain_is_missing"
@@ -28,9 +29,10 @@
     1.63,
     3.28,
     0.6416999999999999,
-    7.265094416037774,
+    7.349558385340398,
     0.0,
     4.0,
+    0.0,
     0.0,
     0.0,
     0.0

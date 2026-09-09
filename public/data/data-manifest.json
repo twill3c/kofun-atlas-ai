@@ -1,7 +1,7 @@
 {
   "version": "2026-09-10",
-  "generated_at": "2026-09-10T00:51:31+09:00",
-  "stage": "L3",
+  "generated_at": "2026-09-10T07:16:27+09:00",
+  "stage": "L4",
   "shipped": false,
   "counts": {
     "geoshape_rows": 2808,
@@ -100,8 +100,13 @@
       "role": "立地の類似度(AI)",
       "retrieved_at": "2026-09-10",
       "license": "MIT(モデル) / 出典は上記の派生",
-      "credit": "立地の埋め込み 8 次元・seed 42・入力 16 次元"
+      "credit": "立地の埋め込み 8 次元・seed 42・入力 17 次元"
     }
   ],
-  "model_version": "kofun-location-v1.0.0"
+  "model_version": "kofun-location-v1.0.0",
+  "projection": {
+    "method": "t-SNE",
+    "trustworthiness": 0.9796,
+    "records": 2805
+  }
 }

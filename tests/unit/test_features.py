@@ -185,3 +185,54 @@ def test_t044_mean_jaccard_is_one_for_identical_sets():
     assert features.mean_jaccard(a, a.copy()) == pytest.approx(1.0)
     b = np.array([[7, 8, 9], [4, 5, 6]])
     assert features.mean_jaccard(a, b) == pytest.approx(0.5)
+
+
+# ------------------------------------------ T-052: 同じ代表点と近さを混ぜない
+
+
+def test_t052_coincident_records_do_not_become_zero_distance_neighbours():
+    """同じ代表点に記録された別レコードを「最近傍 0 m」にしない。
+
+    Geoshape は古墳群にひとつの代表点を与えるので、座標のまったく同じ
+    レコードが実データに 181 件(80 組・2026-09-10 実測)ある。これを
+    最近傍距離 0 m として入れると `log1p(0) = 0` の縮退した山ができ、
+    クラスタリングが立地でなく**記録の重なり**を拾う。
+    """
+    records = [
+        _record(name="甲古墳", lat=34.5000, lon=135.8),
+        _record(name="甲古墳群", lat=34.5000, lon=135.8),  # まったく同じ点
+        _record(name="乙古墳", lat=34.5010, lon=135.8),  # 約 111 m
+    ]
+    context = features.spatial_context(records)
+
+    # 同じ点の相手は最近傍から外れ、次に近い実点までの距離になる。
+    assert context[0]["nearest_kofun_m"] == pytest.approx(111.0, rel=0.05)
+    assert context[1]["nearest_kofun_m"] == pytest.approx(111.0, rel=0.05)
+    assert context[2]["nearest_kofun_m"] == pytest.approx(111.0, rel=0.05)
+
+    # 共有していることは別の二値で残す(捨てない)。
+    assert context[0]["shares_coordinates"] == 1.0
+    assert context[1]["shares_coordinates"] == 1.0
+    assert context[2]["shares_coordinates"] == 0.0
+
+    # 数のほうは同じ点の相手も数える(「近くにいくつ記録があるか」だから)。
+    assert context[0]["kofun_within_1km"] == 2
+
+
+def test_t052_positive_control_zero_distance_would_be_degenerate():
+    """対照: 同じ点を除かなければ log1p(0) = 0 の縮退が起きる。
+
+    この検査が守っている性質そのものを、対照側で明示しておく。
+    """
+    assert math.log1p(0.0) == 0.0
+    records = [
+        _record(name="甲古墳", lat=34.5, lon=135.8),
+        _record(name="乙古墳", lat=34.5, lon=135.8),
+    ]
+    matrix, _, names = features.build_matrix(records)
+    column = matrix[:, names.index("log_nearest_kofun_m")]
+    assert not np.any(column == 0.0), "縮退した 0 が残っている"
+
+
+def test_t052_shares_coordinates_is_a_feature():
+    assert "shares_coordinates" in features.FEATURE_NAMES

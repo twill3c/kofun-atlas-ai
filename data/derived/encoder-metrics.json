@@ -1,11 +1,11 @@
 {
   "seed": 42,
   "records": 2805,
-  "n_features": 16,
+  "n_features": 17,
   "latent_dim": 8,
   "epochs_run": 300,
-  "val_mse": 0.04779957979917526,
-  "ae_reconstruction_mse": 0.04489335196494308,
-  "pca_reconstruction_mse": 0.049661393043087254,
-  "top20_jaccard_vs_baseline": 0.33119678244438133
+  "val_mse": 0.04520348832011223,
+  "ae_reconstruction_mse": 0.0426187380799748,
+  "pca_reconstruction_mse": 0.04945342394408345,
+  "top20_jaccard_vs_baseline": 0.31938149296642526
 }

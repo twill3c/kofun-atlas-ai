@@ -24,6 +24,11 @@ import numpy as np
 
 EARTH_RADIUS_M = 6_371_008.8
 
+# 「同じ代表点」とみなす距離。Geoshape の座標は小数 6 桁(緯度で約 0.1 m)なので、
+# 1 m 未満は同一点の記録揺れと見てよい。実測では 0 m ちょうどか 100 m 超に分かれ、
+# その間(1〜100 m)は 0 件だったので、この閾値は境界に敏感でない(2026-09-10)。
+COINCIDENT_TOLERANCE_M = 1.0
+
 # 名称が「群」を含むか。実測 2026-09-09: 2,805 件中 992 件(35.4%)。
 _GROUP_RE = re.compile(r"群")
 
@@ -42,6 +47,7 @@ FEATURE_NAMES: tuple[str, ...] = (
     "log_nearest_kofun_m",
     "kofun_within_1km",
     "kofun_within_5km",
+    "shares_coordinates",
     "is_group",
     "aspect_is_missing",
     "terrain_is_missing",
@@ -97,8 +103,16 @@ class ScalerParams:
 def spatial_context(records: Sequence[dict]) -> list[dict[str, float]]:
     """座標だけから出せる空間文脈。新しい出典を要らない。
 
-    最近傍までの距離と、半径 1 km / 5 km 以内の他の古墳の数。
-    局所平面近似で足りる距離(数十 km)しか使わない。
+    **「同じ代表点に記録された別レコード」と「空間的に近い古墳」を混ぜない。**
+    Geoshape は古墳群にひとつの代表点を与えるので、座標がまったく同じ
+    レコードが 181 件(80 組・実測 2026-09-10)ある。これを最近傍距離 0 m と
+    して入れると `log1p(0) = 0` の縮退した山ができ、クラスタリングが
+    「立地の型」ではなく**記録の重なり**を拾う。
+
+    そこで最近傍距離は**異なる代表点まで**の距離とし、座標の共有は
+    `shares_coordinates` という別の二値で明示する。
+    半径内の数は「同じ点にある別レコード」も数える —— そこは
+    「近くにいくつ記録があるか」を測っているので混ざらない。
     """
     lat = np.array([r["location"]["lat"] for r in records], dtype=float)
     lon = np.array([r["location"]["lon"] for r in records], dtype=float)
@@ -108,7 +122,12 @@ def spatial_context(records: Sequence[dict]) -> list[dict[str, float]]:
     dist = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
     np.fill_diagonal(dist, np.inf)
 
-    nearest = dist.min(axis=1)
+    # 同じ代表点にある相手は「最近傍」から外す(数からは外さない)。
+    coincident = dist <= COINCIDENT_TOLERANCE_M
+    shares = coincident.any(axis=1)
+    distinct = np.where(coincident, np.inf, dist)
+
+    nearest = distinct.min(axis=1)
     within_1km = (dist <= 1000.0).sum(axis=1)
     within_5km = (dist <= 5000.0).sum(axis=1)
     return [
@@ -116,8 +135,9 @@ def spatial_context(records: Sequence[dict]) -> list[dict[str, float]]:
             "nearest_kofun_m": float(n),
             "kofun_within_1km": float(a),
             "kofun_within_5km": float(b),
+            "shares_coordinates": 1.0 if s else 0.0,
         }
-        for n, a, b in zip(nearest, within_1km, within_5km, strict=True)
+        for n, a, b, s in zip(nearest, within_1km, within_5km, shares, strict=True)
     ]
 
 
@@ -142,6 +162,7 @@ def _raw_row(record: dict, context: dict[str, float]) -> dict[str, float]:
         else None,
         "kofun_within_1km": context["kofun_within_1km"],
         "kofun_within_5km": context["kofun_within_5km"],
+        "shares_coordinates": context["shares_coordinates"],
         "is_group": 1.0 if _GROUP_RE.search(record["name"]) else 0.0,
         "aspect_is_missing": 1.0 if aspect is None else 0.0,
         "terrain_is_missing": 1.0 if elevation is None else 0.0,

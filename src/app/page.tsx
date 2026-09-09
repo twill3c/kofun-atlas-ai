@@ -111,6 +111,40 @@ export default function Home() {
         </div>
       )}
 
+      {manifest.projection && (
+        <div className="card">
+          <h2>立地の地図（二次元配置）</h2>
+          <p className="note">
+            8 次元の立地ベクトルを {manifest.projection.method} で 2
+            次元に落として、{nf.format(manifest.projection.records)}{" "}
+            件を一枚に並べられるようにしました。近くにある点どうしは、立地が
+            似ています。近さの保存度（trustworthiness）は{" "}
+            {manifest.projection.trustworthiness.toFixed(4)} です。
+          </p>
+          <p className="note">
+            測っているのは<strong>近所の保たれ方だけ</strong>です。図全体の
+            大きな配置（離れた点どうしの距離）がどれだけ正しいかは測っていないので、
+            そこは読み取らないでください。
+          </p>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>群に切れなかったこと</h2>
+        <p className="note">
+          立地でグループ分け（クラスタリング）できるかも試しましたが、
+          <strong>できませんでした。</strong>
+          どの設定でも大半が「どの群にも属さない」となり、
+          全体を群に切ることはできません。立地は連続していて、
+          はっきりした型に分かれないというのが実測の結果です。
+        </p>
+        <p className="note">
+          両極にあたる少数（全体の 7.5%）だけは言葉にできます —
+          低く平らな土地に置かれた一群と、周囲から突き出た小高い場所に置かれた一群です。
+          残りは連続しています。
+        </p>
+      </div>
+
       <div className="card">
         <h2>出典</h2>
         <ul>

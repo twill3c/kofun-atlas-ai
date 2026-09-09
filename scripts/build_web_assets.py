@@ -29,6 +29,7 @@ GSI_MANIFEST = ROOT / "data" / "raw" / "gsi" / "manifest.json"
 TERRAIN_MANIFEST = ROOT / "data" / "derived" / "manifest.json"
 ENCODER_METRICS = ROOT / "data" / "derived" / "encoder-metrics.json"
 EMBEDDINGS = ROOT / "public" / "data" / "embeddings.json"
+PROJECTION = ROOT / "public" / "data" / "projection.json"
 OUT = ROOT / "public" / "data" / "data-manifest.json"
 
 MODEL_VERSION = "kofun-location-v1.0.0"
@@ -106,6 +107,16 @@ def main() -> int:
         )
         stage = "L3"
 
+    projection_info = None
+    if PROJECTION.exists():
+        projection = json.loads(PROJECTION.read_text(encoding="utf-8"))
+        projection_info = {
+            "method": projection["method"],
+            "trustworthiness": projection["trustworthiness"],
+            "records": len(projection["xy"]),
+        }
+        stage = "L4"
+
     manifest = {
         "version": dt.date.today().isoformat(),
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -148,6 +159,7 @@ def main() -> int:
         ),
         "sources": sources,
         "model_version": model_version,
+        "projection": projection_info,
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
