@@ -19,5 +19,8 @@ artifacts/
 *.pt
 *.pth
 
+# seed を変えた再現性確認の出力(手元専用・学習に時間がかかるので同梱しない)
+data/derived/*seed*
+
 # 書き出したブラウザ用モデルは明示的に残す
 !public/models/*.onnx

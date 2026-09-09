@@ -89,6 +89,28 @@ export default function Home() {
         </div>
       )}
 
+      {counts.with_embedding > 0 && (
+        <div className="card">
+          <h2>立地の類似度（AI）</h2>
+          <p className="note">
+            各古墳の<strong>置かれた場所</strong>（地形と、まわりにどれだけ古墳が
+            あるか）を {nf.format(counts.with_embedding)} 件ぶん 8 次元のベクトルに
+            変換しています。似た立地の古墳を探すのに使います。
+          </p>
+          <p className="note">
+            <strong>
+              これは古墳そのものの特徴ではありません。
+            </strong>
+            墳形・墳丘長・築造時期・出土品は、再配布できる公開データでは 1 件も
+            埋まっていないためです。考古学上の系統関係や編年を示すものではありません。
+          </p>
+          <p className="note">
+            立地だけを見ているので、<strong>地形の似た別の地域</strong>の古墳が
+            近くに出ます。これは仕様です。
+          </p>
+        </div>
+      )}
+
       <div className="card">
         <h2>出典</h2>
         <ul>

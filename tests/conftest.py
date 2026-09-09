@@ -56,3 +56,13 @@ def processed_path() -> pathlib.Path:
 @pytest.fixture(scope="session")
 def fixtures_dir() -> pathlib.Path:
     return FIXTURES
+
+
+@pytest.fixture(scope="session")
+def require_artifact():
+    """生成物が無いとき、手元では skip・CI では失敗にする。"""
+
+    def _require(path: pathlib.Path, how: str) -> pathlib.Path:
+        return _require_or_skip(path, how)
+
+    return _require

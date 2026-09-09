@@ -1,7 +1,7 @@
 {
-  "version": "2026-09-09",
-  "generated_at": "2026-09-09T05:51:20+09:00",
-  "stage": "L2",
+  "version": "2026-09-10",
+  "generated_at": "2026-09-10T00:51:31+09:00",
+  "stage": "L3",
   "shipped": false,
   "counts": {
     "geoshape_rows": 2808,
@@ -14,7 +14,8 @@
     "with_chronology": 0,
     "prefecture_corrected": 1569,
     "with_elevation": 2804,
-    "with_slope": 2804
+    "with_slope": 2804,
+    "with_embedding": 2805
   },
   "prefectures": {
     "三重県": 118,
@@ -93,7 +94,14 @@
       "credit": "国土地理院の標高データを加工して作成",
       "zoom": 14,
       "radius_m": 1000.0
+    },
+    {
+      "id": "kofun_location_encoder",
+      "role": "立地の類似度(AI)",
+      "retrieved_at": "2026-09-10",
+      "license": "MIT(モデル) / 出典は上記の派生",
+      "credit": "立地の埋め込み 8 次元・seed 42・入力 16 次元"
     }
   ],
-  "model_version": null
+  "model_version": "kofun-location-v1.0.0"
 }

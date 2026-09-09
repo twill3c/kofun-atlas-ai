@@ -9,9 +9,15 @@
 
 ## いまの状態
 
-**L2（地形特徴）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
-46 都道府県、地形特徴 2,804 件。地図・類似検索・AI 分析はこれから実装する。
-進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+**L3（立地の埋め込み）完了。** 収録 2,805 件（Geoshape 2,808 行 → 重複 3 行を統合）、
+46 都道府県、地形特徴 2,804 件、立地の埋め込み 2,805 件。
+地図と探索画面はこれから実装する。進め方は [SPEC.md](SPEC.md) §9 のループ計画を参照。
+
+> **AI が扱うのは「立地」だけである。**
+> 墳形・墳丘長・築造時期・出土品は、再配布できる公開データでは 1 件も埋まっていない
+> （実測 2,805 件中 0 件）。したがって埋め込みは
+> **その古墳が置かれた場所**を表すもので、考古学上の系統関係や編年を示さない。
+> 詳細は [model-card](public/models/model-card.md) と [SPEC.md](SPEC.md) §3.7。
 
 地形は国土地理院の標高タイル（z14・±1,000 m の窓）から算出している。
 **層は画素単位で合成する** — DEM5A はタイルが存在しても中身の大半が NoData の
@@ -104,6 +110,27 @@ CI もクローンも国土地理院を一度も叩かずに同じ結果を再�
 Wikidata と文化庁は**人手スナップショット**である。手順は
 [data/raw/wikidata/README.md](data/raw/wikidata/README.md) と
 [data/raw/bunka/README.md](data/raw/bunka/README.md) を参照。
+
+## Training
+
+学習済みの埋め込みと ONNX はリポジトリに同梱してある（合計 0.3 MB）。
+**再学習は不要**で、CI も学習を回さない。作り直すときだけ次を走らせる（各約 10 分）。
+
+```bash
+./.venv/Scripts/python.exe ml/train_encoder.py     # → public/data/embeddings.json
+./.venv/Scripts/python.exe ml/export_onnx.py       # → public/models/kofun_encoder.onnx
+./.venv/Scripts/python.exe ml/model_card.py        # → public/models/model-card.md
+```
+
+再現性の確認（手元専用・出力は同梱しない）:
+
+```bash
+./.venv/Scripts/python.exe ml/train_encoder.py --seed 42 --out-suffix=-seed42b
+./.venv/Scripts/python.exe ml/train_encoder.py --seed 7  --out-suffix=-seed7
+```
+
+`--out-suffix` の値は `-` で始まるので `=` で渡す（空白区切りだと argparse が
+オプションと解釈する）。
 
 ## Tests
 

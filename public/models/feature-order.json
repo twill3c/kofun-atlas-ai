@@ -1,0 +1,40 @@
+{
+  "feature_names": [
+    "elevation_m",
+    "slope_deg",
+    "aspect_sin",
+    "aspect_cos",
+    "local_relief_250m",
+    "local_relief_500m",
+    "local_relief_1000m",
+    "relative_elevation_500m",
+    "tri",
+    "openness_500m",
+    "log_nearest_kofun_m",
+    "kofun_within_1km",
+    "kofun_within_5km",
+    "is_group",
+    "aspect_is_missing",
+    "terrain_is_missing"
+  ],
+  "medians": [
+    56.93,
+    6.500500000000001,
+    0.04640908259941701,
+    -0.11684407630014211,
+    36.6,
+    60.55,
+    102.62,
+    1.63,
+    3.28,
+    0.6416999999999999,
+    7.265094416037774,
+    0.0,
+    4.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "latent_dim": 8,
+  "note": "標準化は ONNX の中にある。ここに載せる medians は欠測の補完にだけ使う。"
+}

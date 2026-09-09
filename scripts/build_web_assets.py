@@ -27,7 +27,11 @@ INTERIM = ROOT / "data" / "interim" / "kofun_l0.json"
 GEOSHAPE_MANIFEST = ROOT / "data" / "raw" / "geoshape" / "manifest.json"
 GSI_MANIFEST = ROOT / "data" / "raw" / "gsi" / "manifest.json"
 TERRAIN_MANIFEST = ROOT / "data" / "derived" / "manifest.json"
+ENCODER_METRICS = ROOT / "data" / "derived" / "encoder-metrics.json"
+EMBEDDINGS = ROOT / "public" / "data" / "embeddings.json"
 OUT = ROOT / "public" / "data" / "data-manifest.json"
+
+MODEL_VERSION = "kofun-location-v1.0.0"
 
 
 def main() -> int:
@@ -81,6 +85,27 @@ def main() -> int:
         )
         stage = "L2"
 
+    embedding_count = 0
+    model_version = None
+    if EMBEDDINGS.exists() and ENCODER_METRICS.exists():
+        embeddings = json.loads(EMBEDDINGS.read_text(encoding="utf-8"))
+        metrics = json.loads(ENCODER_METRICS.read_text(encoding="utf-8"))
+        embedding_count = len(embeddings["embeddings"])
+        model_version = MODEL_VERSION
+        sources.append(
+            {
+                "id": "kofun_location_encoder",
+                "role": "立地の類似度(AI)",
+                "retrieved_at": dt.date.today().isoformat(),
+                "license": "MIT(モデル) / 出典は上記の派生",
+                "credit": (
+                    f"立地の埋め込み {metrics['latent_dim']} 次元・"
+                    f"seed {metrics['seed']}・入力 {metrics['n_features']} 次元"
+                ),
+            }
+        )
+        stage = "L3"
+
     manifest = {
         "version": dt.date.today().isoformat(),
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -113,6 +138,7 @@ def main() -> int:
             "with_slope": sum(
                 1 for r in rows if (r.get("terrain") or {}).get("slope_deg") is not None
             ),
+            "with_embedding": embedding_count,
         },
         "prefectures": dict(
             sorted(collections.Counter(r["prefecture"] for r in rows if r["prefecture"]).items())
@@ -121,7 +147,7 @@ def main() -> int:
             sorted(collections.Counter(r["quality"]["review_status"] for r in rows).items())
         ),
         "sources": sources,
-        "model_version": None,
+        "model_version": model_version,
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
