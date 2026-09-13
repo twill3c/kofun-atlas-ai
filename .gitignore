@@ -24,3 +24,6 @@ data/derived/*seed*
 
 # 書き出したブラウザ用モデルは明示的に残す
 !public/models/*.onnx
+
+# Next.js の静的書き出し(output: 'export')の出力。Vercel は自分で next build して作るので入力ではない。
+out/

@@ -80,6 +80,192 @@ h1 {
   color: var(--dim);
 }
 
+.wrap.wide {
+  max-width: 1280px;
+}
+
+.notice {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  margin: 0 0 16px;
+}
+
+.cta {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* 地図ページ: 狭い画面では縦に積む。横に溢れさせない(HC-078)。 */
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+@media (min-width: 900px) {
+  .map-layout {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+.map-panel {
+  min-width: 0;
+}
+
+.map-main {
+  min-width: 0;
+}
+
+.map-canvas {
+  width: 100%;
+  height: min(68vh, 620px);
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.map-credit {
+  margin: 6px 0 10px;
+}
+
+/* 地図の操作部品はページの暗色テーマを継承させない。
+ * 継承すると出典欄の地の文が本文色 #f2ece1 になり、半透明の白地の上でコントラスト 3.03
+ * (WCAG AA 未満)まで落ちた(2026-09-14 実測)。出典は法的に必要な表示なので読めること自体が要件。 */
+.map-canvas .maplibregl-ctrl-attrib,
+.map-canvas .maplibregl-ctrl-scale {
+  color: #1f1f1f;
+}
+/* MapLibre の CSS は `.maplibregl-ctrl.maplibregl-ctrl-attrib`(詳細度 0,2,0)で白 50% を指定し、
+ * 後から読み込まれるので同じ詳細度では負ける。一段上げる。 */
+.map-canvas .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background-color: rgba(255, 255, 255, 0.88);
+}
+.map-canvas .maplibregl-ctrl-attrib a {
+  color: #1a4f8b;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.field select,
+.field input {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.result-list,
+.similar-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.similar-list {
+  max-height: none;
+}
+
+.result-list button,
+.similar-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.result-list button .sub,
+.similar-list button .sub {
+  display: block;
+  font-size: 12px;
+}
+
+.result-list button:hover,
+.similar-list button:hover,
+.result-list button:focus-visible,
+.similar-list button:focus-visible {
+  background: var(--line);
+}
+
+button.primary {
+  font: inherit;
+  font-size: 14px;
+  color: var(--bg);
+  background: var(--accent);
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0 4px;
+  cursor: pointer;
+}
+
+button.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.detail h3 {
+  font-size: 13px;
+  color: var(--dim);
+  margin: 14px 0 6px;
+  letter-spacing: 0.04em;
+}
+
+.terrain {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.terrain div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 14px;
+}
+
+.terrain dt {
+  color: var(--dim);
+}
+
+.terrain dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.error {
+  color: #ff8a80;
+  font-size: 14px;
+}
+
 /* fleet: fixed footer */
 .fleet-footer {
   position: fixed;
