@@ -495,6 +495,15 @@ tippecanoe / pmtiles の CLI はこの環境に無く、Vercel での Range 配�
   G-08 の ONNX 照合 3 件は `onnxruntime` が無く skip で緑に見えていた。手元の venv には全部入っている。
   検査用の追加依存 `validate` を置き、CI では「モジュールが無い」を skip でなく失敗にした(T-074)
 
+**公開(2026-09-15)。** 本番は https://kofun-atlas-ai.vercel.app 。GitHub `twill3c/kofun-atlas-ai`(public)。
+
+| 項目 | 結果 |
+|---|---|
+| GitHub Actions の最初の実行 | run 34900988678 は **web ジョブが failure** —— `pnpm/action-setup` の `version: 10` と `package.json` の `packageManager` の二重指定。新しい clone での再現は `run:` の行しかなぞらず、action の入力検査は再現できなかった。直した run 34901238304 で 3 ジョブとも success。二重指定は T-075 で静的に拾う |
+| Vercel | CLI の初回デプロイで GitHub 連携が自動で張られた。以後 `main` への push が本番に出る |
+| 本番の検品(T-072 ほか) | データ 5 ファイルと 6 ページの描画本文が手元の `out/` と一致したうえで 170 件 OK |
+| `/api/health` | 初回は `application/octet-stream` で配られた(静的書き出しは拡張子の無いファイルに MIME を付けない)。`vercel.json` で JSON を付け、本番の検品に項目を足した |
+
 ## 4. データ源と採用可否
 
 | ID | 源 | 役割 | ライセンス / 条件 | V1.0 |

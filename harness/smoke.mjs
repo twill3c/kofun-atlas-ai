@@ -338,6 +338,15 @@ async function main() {
         check(`本番の ${rel} が手元の out/ と同じ中身`, res.status === 200 && h(local) === h(remote),
           `status=${res.status} 手元=${h(local)} 本番=${h(remote)}`);
       }
+      // 静的書き出しは拡張子の無いファイルに MIME を付けない(/api/health が application/octet-stream で配られた・
+      // 2026-09-15 の初回デプロイ)。ローカルの配信では原理的に見えないので、本番でだけ測る
+      const health = await fetch(`${BASE_URL}/api/health`);
+      const healthType = health.headers.get("content-type") ?? "";
+      const healthBody = await health.text();
+      check("本番の /api/health が JSON として配られ、公開済みと答える",
+        health.status === 200 && healthType.includes("application/json") && JSON.parse(healthBody).shipped === true,
+        `status=${health.status} type=${healthType} body=${healthBody.slice(0, 80)}`);
+
       // 画面を作るコードの新しさはデータの指紋では分からない(HC-148 の射程)。描画された本文を手元と突き合わせる
       for (const route of ROUTES) {
         const texts = [];
