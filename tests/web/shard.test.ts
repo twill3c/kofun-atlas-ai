@@ -14,7 +14,15 @@ import { shardOf } from "../../src/lib/shard";
 
 const DETAILS = path.resolve(__dirname, "..", "..", "public", "data", "kofun-details");
 
-describe("T-061 詳細の分割鍵の言語間契約", () => {
+/*
+ * 時間制限。分割ファイルを全部読んで全 ID を突き合わせる。実測(2026-09-14、類似検索の重いテストと同じ実行):
+ * 5,956ms で既定の 5,000ms を越えて落ちた(それ以前の実行では通っていた)。loop_005 で類似検索のテストにだけ
+ * 延長を入れ、同じく全件を読むこのテストには入れていなかった。固定の時間予算は機械の混み具合を測る(HC-245)。
+ * 取りこぼしは時間ではなく `checked > 0` と食い違い 0 件で見ている。
+ */
+const HEAVY_TIMEOUT_MS = 60_000;
+
+describe("T-061 詳細の分割鍵の言語間契約", { timeout: HEAVY_TIMEOUT_MS }, () => {
   const files = readdirSync(DETAILS).filter((f) => f.endsWith(".json"));
 
   it("走査対象が空でない", () => {

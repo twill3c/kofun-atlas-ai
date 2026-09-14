@@ -43,11 +43,19 @@ const fixture: Fixture = JSON.parse(
 );
 const vectors = embeddings.embeddings;
 
-/** 照合表と食い違った行の数と、最初の食い違いを返す。 */
-function mismatches(search: (q: number) => Neighbour[]) {
+/**
+ * 照合表と食い違った行の数と、最初の食い違いを返す。
+ *
+ * `stopAtFirst` は陽性対照用。変異体は「1 件でも食い違う」ことを示せば足りるので、最初の食い違いで止める。
+ * 全件を回すと 1 本 10〜20 秒の同期処理になり(2026-09-14 実測 12,984 / 14,557 / 19,727ms)、
+ * 同じワーカーの他のテストが既定の 5 秒を越え、ワーカーの応答も時間切れになった(loop_006)。
+ * **一致の側(食い違い 0 件)は必ず全件を回す** —— 0 件は途中で止めては言えない。
+ */
+function mismatches(search: (q: number) => Neighbour[], stopAtFirst = false) {
   let bad = 0;
   let first: string | null = null;
   for (let q = 0; q < vectors.length; q++) {
+    if (stopAtFirst && bad > 0) break;
     const got = search(q);
     const wantIds = fixture.neighbours[q];
     const wantScores = fixture.scores[q];
@@ -126,14 +134,19 @@ describe("T-057 陽性対照 — 変異体はそれぞれ照合で落ちる", { 
   });
 
   it("(a) 自分自身を除かない実装は落ちる", () => {
-    expect(mismatches((q) => variant(q, 10, { keepSelf: true })).bad).toBeGreaterThan(0);
+    expect(mismatches((q) => variant(q, 10, { keepSelf: true }), true).bad).toBeGreaterThan(0);
   });
 
   it("(b) 類似度の昇順で並べる実装は落ちる", () => {
-    expect(mismatches((q) => variant(q, 10, { ascending: true })).bad).toBeGreaterThan(0);
+    expect(mismatches((q) => variant(q, 10, { ascending: true }), true).bad).toBeGreaterThan(0);
   });
 
   it("(c) 同点をレコード順の降順にする実装は落ちる", () => {
-    expect(mismatches((q) => variant(q, 10, { tieDesc: true })).bad).toBeGreaterThan(0);
+    expect(mismatches((q) => variant(q, 10, { tieDesc: true }), true).bad).toBeGreaterThan(0);
+  });
+
+  it("陽性対照の陽性対照: 最初で止める数え方でも、変異させない土台は 0 件のまま", () => {
+    // 止める数え方が「何でも 1 件と数える」壊れ方をしていないことを、止める側でも確かめる
+    expect(mismatches((q) => topK(vectors, q, fixture.top_k), true).bad).toBe(0);
   });
 });

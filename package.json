@@ -11,7 +11,7 @@
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "smoke": "node harness/smoke.mjs",
+    "smoke": "node harness/smoke-run.mjs",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

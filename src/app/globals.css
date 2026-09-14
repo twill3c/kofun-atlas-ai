@@ -266,6 +266,159 @@ button.primary:disabled {
   font-size: 14px;
 }
 
+/* サイト内ナビ。狭い幅では折り返す(横に溢れさせない)。 */
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.site-nav a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.site-nav a:first-child {
+  font-weight: 700;
+  margin-right: auto;
+}
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  text-decoration: underline;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+.filter-row .field {
+  min-width: 180px;
+  margin: 0;
+}
+
+button.secondary {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.legend {
+  margin: 0 0 12px;
+}
+.legend-title {
+  font-size: 13px;
+  color: var(--dim);
+}
+.legend-steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0;
+  padding: 0;
+  font-size: 13px;
+}
+.legend-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.explore-figures {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin: 0 0 16px;
+}
+@media (min-width: 900px) {
+  .explore-figures {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+.explore-figures figure {
+  margin: 0;
+  position: relative;
+  min-width: 0;
+}
+.explore-figures svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  touch-action: none;
+}
+.scatter svg {
+  cursor: crosshair;
+}
+.plot-surface {
+  fill: var(--panel);
+}
+.hover-ring {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.tooltip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(18, 16, 13, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  pointer-events: none;
+  max-width: calc(100% - 16px);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin: 0 0 16px;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.data-table th {
+  color: var(--dim);
+  font-weight: 600;
+}
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.data-table caption {
+  text-align: left;
+  padding: 0 0 6px;
+}
+
 /* fleet: fixed footer */
 .fleet-footer {
   position: fixed;

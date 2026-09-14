@@ -56,6 +56,16 @@ function check(name, ok, detail = "") {
  * `innerText` を使う —— スクリプト内の文字列を含まず、ブロックの境目は空白でなく改行になる
  * (最初の探針は要素ごとの文字を集めて <script> の RSC ペイロードまで数え、重複を出した)。
  */
+/**
+ * 見つけた空白の報告。**件数を必ず先頭に出す** —— 例を 3 件に切っていたとき、見えた 3 件だけを直して
+ * 残りの 2 件を次の実行まで持ち越した(loop_006)。例は切ってよいが、切ったことが読めるようにする。
+ */
+function spacesDetail(spaces) {
+  if (spaces.length === 0) return "";
+  const shown = spaces.slice(0, 5).join(" ");
+  return spaces.length > 5 ? `${spaces.length} 件(先頭 5 件): ${shown}` : `${spaces.length} 件: ${shown}`;
+}
+
 async function strayJapaneseSpaces(page) {
   return page.evaluate(() => {
     const JA = "[\\u3040-\\u30ff\\u3400-\\u9fff\\u3000-\\u303f\\uff08\\uff09\\uff0c\\uff1a]";
@@ -374,7 +384,7 @@ async function main() {
       (await page.locator(".detail").innerText()).includes("似ているという意味ではありません"));
     const mapSpaces = await strayJapaneseSpaces(page);
     check("/map/(詳細と似た立地を開いた状態)の本文に和文の余計な空白が無い", mapSpaces.length === 0,
-      mapSpaces.slice(0, 3).join(" "));
+      spacesDetail(mapSpaces));
 
     // 到達: 地図上の点を押しても詳細が開く(座標で撃つので、その点が見えている状態で撃つ)
     const clicked = await page.evaluate(() => {
@@ -405,13 +415,189 @@ async function main() {
     await empty.close();
 
     // --- 画面幅(HC-078) ----------------------------------------------------
+    // --- 立地の探索(T-067) ----------------------------------------------------
+    console.log("立地の探索");
+    const explore = JSON.parse(await readFile(path.join(OUT, "data", "explore.json"), "utf-8"));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const exResp = await page.goto(`${base}/explore/`, { waitUntil: "domcontentloaded" });
+    check("/explore/ が HTTP 200 で開く", exResp?.status() === 200, `status=${exResp?.status()}`);
+    await page.waitForFunction(
+      (n) => document.querySelectorAll(".scatter svg circle[data-i]").length === n,
+      explore.ids.length,
+      { timeout: RENDER_DEADLINE_MS },
+    ).catch(() => {});
+    const drawn = await page.evaluate(() => document.querySelectorAll(".scatter svg circle[data-i]").length);
+    check("散布図に描いた点の数がデータ件数と一致する", drawn === explore.ids.length, `描画=${drawn} データ=${explore.ids.length}`);
+
+    // G-29: 描いた位置を、SPEC §3.14 の式で配った座標から独立に計算した位置と比べる
+    const placement = async () => page.evaluate((xy) => {
+      const svg = document.querySelector(".scatter svg");
+      const view = Number(svg.dataset.view);
+      const pad = Number(svg.dataset.pad);
+      const span = view - 2 * pad;
+      let worst = 0;
+      for (const c of svg.querySelectorAll("circle[data-i]")) {
+        const [x, y] = xy[Number(c.dataset.i)];
+        const ux = pad + ((x + 1) / 2) * span;
+        const uy = pad + (1 - (y + 1) / 2) * span;
+        worst = Math.max(worst, Math.abs(Number(c.getAttribute("cx")) - ux), Math.abs(Number(c.getAttribute("cy")) - uy));
+      }
+      return worst;
+    }, explore.xy);
+    const worstPlacement = await placement();
+    check("G-29 散布図の各点の位置が配った座標と一致する(差 0.01 以下)", worstPlacement <= 0.01, `最大差=${worstPlacement}`);
+    await page.evaluate(() => {
+      const c = document.querySelector(".scatter svg circle[data-i]");
+      c.dataset.saved = c.getAttribute("cx");
+      c.setAttribute("cx", String(Number(c.getAttribute("cx")) + 1));
+    });
+    const shifted = await placement();
+    check("陽性対照: 1 点を 1 単位ずらすと位置の検査が検出する", shifted >= 0.99, `ずらした後の最大差=${shifted}`);
+    await page.evaluate(() => {
+      const c = document.querySelector(".scatter svg circle[data-i]");
+      c.setAttribute("cx", c.dataset.saved);
+    });
+
+    // G-14: 図の中の要素が viewBox に収まる。getBBox は変換前の箱なので、変換が無いことも確かめる
+    const containment = async () => page.evaluate(() => {
+      const out = [];
+      for (const svg of document.querySelectorAll(".explore-figures svg")) {
+        const [vx, vy, vw, vh] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+        let outside = 0;
+        let transformed = 0;
+        for (const el of svg.querySelectorAll("circle, rect, text, path, line")) {
+          if (el.getAttribute("transform")) transformed++;
+          const b = el.getBBox();
+          if (b.x < vx - 0.01 || b.y < vy - 0.01 || b.x + b.width > vx + vw + 0.01 || b.y + b.height > vy + vh + 0.01) outside++;
+        }
+        out.push({ label: svg.getAttribute("aria-label").slice(0, 12), outside, transformed });
+      }
+      return out;
+    });
+    const boxes = await containment();
+    check("G-14 図の要素がすべて viewBox に収まる", boxes.length === 2 && boxes.every((b) => b.outside === 0), JSON.stringify(boxes));
+    check("図の要素に変換(transform)が無い(getBBox の前提)", boxes.every((b) => b.transformed === 0), JSON.stringify(boxes));
+    await page.evaluate(() => {
+      const svg = document.querySelector(".scatter svg");
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", "-50");
+      t.setAttribute("y", "20");
+      t.setAttribute("id", "__outside_control");
+      t.textContent = "枠外";
+      svg.appendChild(t);
+    });
+    const leakedBoxes = await containment();
+    check("陽性対照: 枠外に文字を足すと viewBox の検査が検出する", leakedBoxes[0].outside === 1, JSON.stringify(leakedBoxes));
+    await page.evaluate(() => document.getElementById("__outside_control")?.remove());
+
+    // 凡例: 5 クラスの件数の合計が値のある件数に一致する
+    const legendCounts = await page.evaluate(() =>
+      [...document.querySelectorAll(".legend-steps li .note")].map((n) => Number(n.textContent.replace(/[^\d]/g, ""))),
+    );
+    const nonNull = explore.metrics.elevation_m.filter((v) => v !== null).length;
+    check("凡例が 5 クラスで、件数の合計が値のある件数に一致する",
+      legendCounts.length === 5 && legendCounts.reduce((a, b) => a + b, 0) === nonNull, `${legendCounts} 合計≠${nonNull}`);
+
+    // 到達: 点に重ねると、その点の古墳の名前が出る
+    const scatterBox = await page.locator(".scatter svg").boundingBox();
+    await page.locator(".scatter svg").scrollIntoViewIfNeeded();
+    // 変数名は地図の検査の `target` と重ならないようにする(同じ関数の中で const を二重に宣言すると、
+    // 読み込みの時点で落ちて検査が一つも走らない)。
+    const hoverTarget = await page.evaluate(() => {
+      const svg = document.querySelector(".scatter svg");
+      const c = svg.querySelector("circle[data-i]");
+      const ux = Number(c.getAttribute("cx"));
+      const uy = Number(c.getAttribute("cy"));
+      const p = new DOMPoint(ux, uy).matrixTransform(svg.getScreenCTM());
+      return { i: Number(c.dataset.i), x: p.x, y: p.y, ux, uy, view: Number(svg.dataset.view), pad: Number(svg.dataset.pad) };
+    });
+    await page.mouse.move(hoverTarget.x, hoverTarget.y);
+    const tip = await page.locator(".tooltip strong").textContent({ timeout: 5000 }).catch(() => null);
+    // 最寄りの点を出すので、重なっている点では別の古墳になりうる。そこで「その名前を持つ点のどれかが、
+    // 重ねた位置から描画単位 14 以内にある」ことを、SPEC §3.14 の式で独立に計算して確かめる。
+    const hoverSpan = hoverTarget.view - 2 * hoverTarget.pad;
+    const nearby = tip === null ? [] : explore.xy.flatMap(([x, y], i) => {
+      if (explore.name[i] !== tip) return [];
+      const ux = hoverTarget.pad + ((x + 1) / 2) * hoverSpan;
+      const uy = hoverTarget.pad + (1 - (y + 1) / 2) * hoverSpan;
+      return Math.hypot(ux - hoverTarget.ux, uy - hoverTarget.uy) <= 14 ? [i] : [];
+    });
+    check("点に重ねると、重ねた位置の近くの古墳の名前が出る(操作が届いた)", nearby.length > 0,
+      `出た名前=${tip} 重ねた点=${explore.name[hoverTarget.i]}`);
+
+    // 範囲選択: ドラッグした枠の中の件数を、枠の属性から SPEC の規則で独立に数えて表示と比べる
+    const box = scatterBox ?? (await page.locator(".scatter svg").boundingBox());
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.3);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.55, { steps: 8 });
+    await page.mouse.up();
+    const brushRect = await page.evaluate(() => {
+      const r = document.querySelector(".scatter svg rect.brush");
+      const svg = document.querySelector(".scatter svg");
+      return r ? { x: +r.getAttribute("x"), y: +r.getAttribute("y"), w: +r.getAttribute("width"), h: +r.getAttribute("height"),
+        view: +svg.dataset.view, pad: +svg.dataset.pad } : null;
+    });
+    check("ドラッグすると範囲選択の枠が出る(操作が届いた)", !!brushRect && brushRect.w > 0 && brushRect.h > 0, JSON.stringify(brushRect));
+    if (brushRect) {
+      const span = brushRect.view - 2 * brushRect.pad;
+      const toNorm = (ux, uy) => [((ux - brushRect.pad) / span) * 2 - 1, (1 - (uy - brushRect.pad) / span) * 2 - 1];
+      const [x0, y1] = toNorm(brushRect.x, brushRect.y);
+      const [x1, y0] = toNorm(brushRect.x + brushRect.w, brushRect.y + brushRect.h);
+      const expected = explore.xy.filter(([x, y]) => x0 <= x && x <= x1 && y0 <= y && y <= y1).length;
+      const shown = await page.locator("section [aria-live]").textContent().catch(() => "");
+      check("範囲選択の件数が、枠から独立に数えた件数と一致する", shown.startsWith(`${expected.toLocaleString("ja-JP")} 件`),
+        `表示=${shown} 独立計算=${expected}`);
+    }
+    await page.getByRole("button", { name: "範囲選択を外す" }).click().catch(() => {});
+
+    // 県の強調: 選んだ県以外の点が灰になる
+    const exPrefCounts = {};
+    for (const p of explore.pref) if (p) exPrefCounts[p] = (exPrefCounts[p] ?? 0) + 1;
+    const [exPref, exPrefN] = Object.entries(exPrefCounts).sort((a, b) => b[1] - a[1])[0];
+    await page.selectOption(".filter-row select >> nth=1", exPref);
+    await page.waitForFunction((n) => document.querySelector("section [aria-live]")?.textContent?.startsWith(n), exPrefN.toLocaleString("ja-JP"), { timeout: 5000 }).catch(() => {});
+    const muted = await page.evaluate(() =>
+      [...document.querySelectorAll(".scatter svg circle[data-i]")].filter((c) => c.getAttribute("fill") === "#6f675c").length,
+    );
+    const nullElev = explore.metrics.elevation_m.filter((v, i) => v === null && explore.pref[i] === exPref).length;
+    check(`${exPref} を強調すると、それ以外の点が灰になる`, muted === explore.ids.length - exPrefN + nullElev,
+      `灰=${muted} 期待=${explore.ids.length - exPrefN + nullElev}`);
+    const exShown = await page.locator("section [aria-live]").textContent().catch(() => "");
+    check(`${exPref} を強調すると一覧の件数がその県の件数になる`, exShown.startsWith(`${exPrefN.toLocaleString("ja-JP")} 件`), exShown);
+    const radiusAttr = await page.evaluate(() => Number(document.querySelector(".scatter svg").dataset.radius));
+    const caption = await page.locator(".scatter figcaption").textContent();
+    check("点の半径が SPEC §3.14 の候補(4 / 3 / 2)のどれかで、重なりの実測が添えてある", [4, 3, 2].includes(radiusAttr) && caption.includes("重なりの割合"),
+      `半径=${radiusAttr}`);
+    console.log(`       (${caption.trim().slice(0, 80)})`);
+
+    // --- 都道府県の比較 ----------------------------------------------------------
+    console.log("都道府県の比較");
+    await page.goto(`${base}/compare/`, { waitUntil: "domcontentloaded" });
+    const compareRows = await page.locator(".data-table tbody tr").count();
+    check("比較表の行数が都道府県の数と一致する", compareRows === Object.keys(exPrefCounts).length,
+      `行=${compareRows} 県=${Object.keys(exPrefCounts).length}`);
+    const firstRow = await page.locator(".data-table tbody tr >> nth=0 >> td").allTextContents();
+    check("比較表の先頭が収録件数の最も多い県で、件数が一致する", firstRow[0] === exPref && firstRow[1] === exPrefN.toLocaleString("ja-JP"),
+      JSON.stringify(firstRow.slice(0, 2)));
+    check("比較表に「実在する古墳の数ではない」と書いてある",
+      (await page.locator("body").innerText()).includes("実在する古墳の数ではありません"));
+
     console.log("画面幅");
     // 320 は SPEC G-15 が指定する最小幅。最初は 360 までしか測っていなかった。
     for (const [w, h] of [[320, 700], [360, 780], [768, 900], [1280, 900], [1680, 1000]]) {
-      for (const route of ["/", "/map/"]) {
+      for (const route of ["/", "/map/", "/explore/", "/compare/", "/sources/", "/methodology/"]) {
         await page.setViewportSize({ width: w, height: h });
         await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
         await page.waitForTimeout(300);
+        if (route === "/explore/") {
+          // 散布図はデータを読んでから描く。描き終わる前に測ると、読み込み中の小さな画面を測ってしまう
+          await page.waitForFunction(() => document.querySelectorAll(".scatter svg circle[data-i]").length > 0, null,
+            { timeout: RENDER_DEADLINE_MS }).catch(() => {});
+        }
+        if (w === 1280 && ["/explore/", "/compare/", "/sources/", "/methodology/"].includes(route)) {
+          const spaces = await strayJapaneseSpaces(page);
+          check(`${route} の本文に和文の余計な空白が無い`, spaces.length === 0, spacesDetail(spaces));
+        }
         const m = await page.evaluate(() => ({
           sw: document.documentElement.scrollWidth,
           cw: document.documentElement.clientWidth,
@@ -428,7 +614,7 @@ async function main() {
     await page.goto(`${base}/`, { waitUntil: "domcontentloaded" });
 
     const homeSpaces = await strayJapaneseSpaces(page);
-    check("/ の本文に和文の余計な空白が無い", homeSpaces.length === 0, homeSpaces.slice(0, 3).join(" "));
+    check("/ の本文に和文の余計な空白が無い", homeSpaces.length === 0, spacesDetail(homeSpaces));
     // 陽性対照: 撮影で見つけた形そのものを注入すると、この検査が拾う
     await page.evaluate(() => {
       const p = document.createElement("p");

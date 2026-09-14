@@ -16,6 +16,14 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
+        <nav className="site-nav" aria-label="サイト内">
+          <a href="/">Kofun Atlas AI</a>
+          <a href="/map/">地図</a>
+          <a href="/explore/">立地の探索</a>
+          <a href="/compare/">都道府県の比較</a>
+          <a href="/methodology/">作り方</a>
+          <a href="/sources/">出典</a>
+        </nav>
         <main>{children}</main>
         <Footer />
       </body>
