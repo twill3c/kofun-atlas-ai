@@ -1,8 +1,8 @@
 {
-  "version": "2026-09-10",
-  "generated_at": "2026-09-10T07:16:27+09:00",
+  "version": "2026-09-15",
+  "generated_at": "2026-09-15T05:25:17+09:00",
   "stage": "L4",
-  "shipped": false,
+  "shipped": true,
   "counts": {
     "geoshape_rows": 2808,
     "merged_duplicate_rows": 3,
@@ -98,7 +98,7 @@
     {
       "id": "kofun_location_encoder",
       "role": "立地の類似度(AI)",
-      "retrieved_at": "2026-09-10",
+      "retrieved_at": "2026-09-15",
       "license": "MIT(モデル) / 出典は上記の派生",
       "credit": "立地の埋め込み 8 次元・seed 42・入力 17 次元"
     }

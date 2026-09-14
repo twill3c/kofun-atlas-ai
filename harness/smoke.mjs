@@ -11,9 +11,13 @@
  * **この検品器は失敗を終了コードで知らせる。** `| tail` の後の $? は tail のもの(HC-080)。
  *   node harness/smoke.mjs          検品する(0 = 合格 / 1 = 不合格 / 2 = 前提不足 / 3 = 検品器が落ちた)
  *   node harness/smoke.mjs --shot   地図の撮影も行う
+ *   SMOKE_BASE_URL=https://kofun-atlas-ai.vercel.app node harness/smoke-run.mjs
+ *                                   本番を検品する。**最初に本番が手元の out/ と同じかを確かめ、違えば他を見ずに止める**
+ *                                   (健やかさの検査は「新しいか」を何も言わない — HC-148)
  */
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdir, readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
@@ -23,6 +27,18 @@ const SHOTS = path.join(ROOT, "artifacts", "screenshots");
 const WANT_SHOT = process.argv.includes("--shot");
 const RENDER_DEADLINE_MS = Number(process.env.SMOKE_RENDER_DEADLINE_MS ?? 20000);
 const EMPTY_CONTROL_WAIT_MS = Number(process.env.SMOKE_EMPTY_CONTROL_MS ?? 8000);
+const BASE_URL = process.env.SMOKE_BASE_URL ? process.env.SMOKE_BASE_URL.replace(/\/$/, "") : null;
+const ASSET_BUDGET_BYTES = 60 * 1024 * 1024; // SPEC §7 G-13
+const ROUTES = ["/", "/map/", "/explore/", "/compare/", "/sources/", "/methodology/"];
+
+/** 二つの本文の最初の食い違いを前後つきで示す。 */
+function firstDiff(a, b) {
+  if (a === b) return "";
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const cut = (s) => JSON.stringify(s.slice(Math.max(0, i - 15), i + 25));
+  return `位置 ${i}(長さ 手元 ${a.length} / 本番 ${b.length}): 手元 ${cut(a)} 本番 ${cut(b)}`;
+}
 
 // フリート共通フッタの正本: koho-lens/src/render.py 137〜141 行(2026-09-14 参照)
 const CANON = {
@@ -71,6 +87,151 @@ async function strayJapaneseSpaces(page) {
     const JA = "[\\u3040-\\u30ff\\u3400-\\u9fff\\u3000-\\u303f\\uff08\\uff09\\uff0c\\uff1a]";
     const re = new RegExp(`(.{0,10}${JA}) (${JA}.{0,10})`, "gu");
     return [...document.body.innerText.matchAll(re)].map((m) => `…${m[1]}␣${m[2]}…`);
+  });
+}
+
+/** 同じ文言の指摘をまとめ、件数を先頭に出す(例を切っても切ったことが読める)。 */
+function listDetail(items) {
+  if (items.length === 0) return "";
+  const counts = new Map();
+  for (const it of items) counts.set(it, (counts.get(it) ?? 0) + 1);
+  const shown = [...counts].slice(0, 5).map(([k, n]) => (n > 1 ? `${k} ×${n}` : k)).join(" / ");
+  return `${items.length} 件${counts.size > 5 ? `(先頭 5 種)` : ""}: ${shown}`;
+}
+
+/**
+ * アクセシビリティの監査(page.evaluate に渡すので自己完結させる)。
+ *   - 操作部品(リンク・ボタン・選択・入力)に名前があるか。placeholder だけは名前と数えない
+ *   - 図(svg・canvas・img)に代替の説明があるか。aria-hidden の装飾は除く
+ *   - 本文の文字と背景のコントラスト(WCAG AA: 通常 4.5 / 大きい文字 3.0)
+ * 背景は祖先の背景色を合成して求める。**地図の中は測らない** —— 文字の真後ろに描かれているのは祖先でなく
+ * 兄弟のキャンバスで、祖先の合成は誤る(HC-268)。地図の出典欄は別の検査が測っている。
+ * 背景画像を持つ祖先に当たったら「測れない」として指摘に入れる(黙って通さない)。
+ */
+function auditA11y() {
+  const clean = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const visible = (el) => {
+    const s = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return s.visibility !== "hidden" && s.display !== "none" && r.width > 0 && r.height > 0;
+  };
+  const desc = (el) => {
+    const cls = typeof el.className === "string" && el.className.trim() ? `.${el.className.trim().split(/\s+/)[0]}` : "";
+    return `${el.tagName.toLowerCase()}${cls}`;
+  };
+  const nameOf = (el) => {
+    const aria = clean(el.getAttribute("aria-label"));
+    if (aria) return aria;
+    const by = el.getAttribute("aria-labelledby");
+    if (by) {
+      const s = clean(by.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? "").join(" "));
+      if (s) return s;
+    }
+    if (el.labels && el.labels.length) {
+      const s = clean([...el.labels].map((l) => l.textContent).join(" "));
+      if (s) return s;
+    }
+    if (!["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName)) {
+      const s = clean(el.textContent);
+      if (s) return s;
+      const alt = clean(el.querySelector("img[alt]")?.getAttribute("alt"));
+      if (alt) return alt;
+    }
+    return clean(el.getAttribute("title"));
+  };
+
+  const controls = [...document.querySelectorAll(
+    "a[href], button, select, textarea, input:not([type=hidden]), [role=button], [tabindex]:not([tabindex='-1'])",
+  )].filter(visible);
+  const unnamed = controls.filter((el) => !nameOf(el)).map(desc);
+
+  const figures = [...document.querySelectorAll("svg, canvas, img")].filter((el) => {
+    if (el.closest("[aria-hidden='true']") || !visible(el)) return false;
+    if (el.tagName.toLowerCase() === "svg" && el.parentElement?.closest("svg")) return false;
+    const r = el.getBoundingClientRect();
+    return r.width >= 24 && r.height >= 24;
+  });
+  const unlabeledFigures = figures.filter((el) => {
+    if (el.tagName === "IMG") return !el.hasAttribute("alt");
+    if (nameOf(el)) return false;
+    return !clean(el.querySelector?.(":scope > title")?.textContent);
+  }).map(desc);
+
+  const parse = (c) => {
+    const m = /rgba?\(([^)]+)\)/.exec(c);
+    if (!m) return null;
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
+  };
+  const over = (fg, bg) => ({
+    r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1,
+  });
+  const lum = ({ r, g, b }) => {
+    const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const ratio = (x, y) => {
+    const [hi, lo] = [lum(x), lum(y)].sort((p, q) => q - p);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const backgroundOf = (el) => {
+    const layers = [];
+    for (let n = el; n; n = n.parentElement) {
+      const s = getComputedStyle(n);
+      if (s.backgroundImage && s.backgroundImage !== "none") return null;
+      const c = parse(s.backgroundColor);
+      if (c && c.a > 0) {
+        layers.push(c);
+        if (c.a >= 1) break;
+      }
+    }
+    let bg = { r: 255, g: 255, b: 255, a: 1 };
+    for (const c of layers.reverse()) bg = over(c, bg);
+    return bg;
+  };
+
+  const lowContrast = [];
+  let measured = 0;
+  for (const el of document.body.querySelectorAll("*")) {
+    if (el.closest("svg, .maplibregl-map, [aria-hidden='true'], script, style")) continue;
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    if (!visible(el)) continue;
+    const s = getComputedStyle(el);
+    const fg = parse(s.color);
+    const bg = backgroundOf(el);
+    if (!fg || !bg) {
+      lowContrast.push(`${desc(el)} 測れない(${s.color})`);
+      continue;
+    }
+    measured++;
+    const size = parseFloat(s.fontSize);
+    const need = size >= 24 || (Number(s.fontWeight) >= 700 && size >= 18.66) ? 3 : 4.5;
+    const r = ratio(over(fg, bg), bg);
+    if (r < need) lowContrast.push(`${desc(el)} ${r.toFixed(2)}<${need}`);
+  }
+
+  return {
+    lang: document.documentElement.lang,
+    h1: document.querySelectorAll("h1").length,
+    controls: controls.length,
+    unnamed,
+    figures: figures.length,
+    unlabeledFigures,
+    measured,
+    lowContrast,
+  };
+}
+
+/** Tab を一度押して焦点が移った先と、焦点の輪が見えるか。 */
+async function focusRing(page) {
+  await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+  await page.keyboard.press("Tab");
+  return page.evaluate(() => {
+    const el = document.activeElement;
+    if (!el || el === document.body) return { moved: false, visible: false, what: "body" };
+    const s = getComputedStyle(el);
+    const ring = (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== "none";
+    return { moved: true, visible: ring, what: `${el.tagName.toLowerCase()} ${el.textContent.trim().slice(0, 10)}` };
   });
 }
 
@@ -145,14 +306,62 @@ async function main() {
     process.exit(2);
   }
 
+  // --- G-13: 配る静的アセットの合計(T-070 の out/ 側。ビルドの後に必ず走るのはこの検品器) -----
+  console.log("配る資産");
+  const outFiles = (await readdir(OUT, { recursive: true, withFileTypes: true })).filter((d) => d.isFile());
+  let outBytes = 0;
+  for (const d of outFiles) outBytes += (await stat(path.join(d.parentPath, d.name))).size;
+  check(`G-13 out/ の合計(${outFiles.length} ファイル)が 60 MB 未満`, outFiles.length > 0 && outBytes < ASSET_BUDGET_BYTES,
+    `${outBytes.toLocaleString("en-US")} B`);
+  console.log(`       (out/ ${outBytes.toLocaleString("en-US")} B)`);
+
   const server = await serve();
-  const base = `http://127.0.0.1:${server.address().port}`;
+  const localBase = `http://127.0.0.1:${server.address().port}`;
+  const base = BASE_URL ?? localBase;
   const origin = new URL(base).origin;
   const browser = await chromium.launch();
   const consoleErrors = [];
   const badSameOrigin = [];
 
   try {
+    if (BASE_URL) {
+      // --- 本番が手元の out/ と同じか。違えば、健やかさを何項目測っても古い版を検品するだけなので止める ---
+      console.log(`本番の同一性(${BASE_URL})`);
+      for (const rel of ["data/data-manifest.json", "data/kofun-points.geojson", "data/explore.json",
+        "data/embeddings.json", "models/kofun_encoder.onnx"]) {
+        const res = await fetch(`${BASE_URL}/${rel}`);
+        const remote = Buffer.from(await res.arrayBuffer());
+        const local = await readFile(path.join(OUT, rel));
+        // 手元は core.autocrlf で CRLF になりうる。改行を揃えてから測る(揃えないと必ず食い違う)
+        const norm = (b) => (rel.endsWith(".onnx") ? b : Buffer.from(b.toString("utf-8").replace(/\r\n/g, "\n")));
+        const h = (b) => createHash("sha256").update(norm(b)).digest("hex").slice(0, 12);
+        check(`本番の ${rel} が手元の out/ と同じ中身`, res.status === 200 && h(local) === h(remote),
+          `status=${res.status} 手元=${h(local)} 本番=${h(remote)}`);
+      }
+      // 画面を作るコードの新しさはデータの指紋では分からない(HC-148 の射程)。描画された本文を手元と突き合わせる
+      for (const route of ROUTES) {
+        const texts = [];
+        for (const b of [localBase, BASE_URL]) {
+          const p = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+          await p.goto(`${b}${route}`, { waitUntil: "domcontentloaded" });
+          if (route === "/map/") await waitForRenderedPoints(p, RENDER_DEADLINE_MS);
+          if (route === "/explore/") {
+            await p.waitForFunction(() => document.querySelectorAll(".scatter svg circle[data-i]").length > 0, null,
+              { timeout: RENDER_DEADLINE_MS }).catch(() => {});
+          }
+          texts.push(await p.evaluate(() => document.body.innerText));
+          await p.close();
+        }
+        check(`本番の ${route} の本文が手元の out/ と一致する`, texts[0].length > 0 && texts[0] === texts[1],
+          firstDiff(texts[0], texts[1]));
+      }
+      if (failures.length) {
+        console.error("\n本番が手元の out/ と違う。古い版を検品しないよう、ここで止める。");
+        for (const f of failures) console.error(`  - ${f}`);
+        process.exit(1);
+      }
+    }
+
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
     page.on("pageerror", (e) => consoleErrors.push(String(e)));
@@ -581,6 +790,52 @@ async function main() {
       JSON.stringify(firstRow.slice(0, 2)));
     check("比較表に「実在する古墳の数ではない」と書いてある",
       (await page.locator("body").innerText()).includes("実在する古墳の数ではありません"));
+
+    console.log("アクセシビリティ");
+    for (const route of ["/", "/map/", "/explore/", "/compare/", "/sources/", "/methodology/"]) {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(`${base}${route}`, { waitUntil: "domcontentloaded" });
+      if (route === "/map/") await waitForRenderedPoints(page, RENDER_DEADLINE_MS);
+      if (route === "/explore/") {
+        await page.waitForFunction(() => document.querySelectorAll(".scatter svg circle[data-i]").length > 0, null,
+          { timeout: RENDER_DEADLINE_MS }).catch(() => {});
+      }
+      const a = await page.evaluate(auditA11y);
+      check(`${route} の文書の言語が ja`, a.lang === "ja", `lang=${a.lang}`);
+      check(`${route} の h1 がちょうど 1 つ`, a.h1 === 1, `h1=${a.h1}`);
+      check(`${route} の操作部品(${a.controls} 個)すべてに名前がある`, a.controls > 0 && a.unnamed.length === 0, listDetail(a.unnamed));
+      check(`${route} の図(${a.figures} 個)すべてに代替の説明がある`, a.unlabeledFigures.length === 0, listDetail(a.unlabeledFigures));
+      check(`${route} の本文の文字(${a.measured} 要素)がコントラスト基準を満たす`, a.measured > 0 && a.lowContrast.length === 0,
+        listDetail(a.lowContrast));
+      const ring = await focusRing(page);
+      check(`${route} で Tab を押すと焦点が移り、焦点の輪が見える`, ring.moved && ring.visible, JSON.stringify(ring));
+    }
+    // 陽性対照: 名前の無いボタン・読めない文字・説明の無い図・焦点の輪を消す指定を足すと、それぞれ拾う
+    const before = await page.evaluate(auditA11y);
+    await page.evaluate(() => {
+      const box = document.createElement("div");
+      box.id = "__a11y_control";
+      box.innerHTML = '<button type="button"></button><p style="color:#202020">対照の読めない文字</p>'
+        + '<svg width="80" height="80"><rect width="80" height="80"></rect></svg>';
+      (document.querySelector("main") ?? document.body).appendChild(box);
+      const st = document.createElement("style");
+      st.id = "__a11y_control_style";
+      st.textContent = "*:focus, *:focus-visible { outline: none !important; box-shadow: none !important; }";
+      document.head.appendChild(st);
+    });
+    const after = await page.evaluate(auditA11y);
+    check("陽性対照: 名前の無いボタンを足すと拾う", after.unnamed.length === before.unnamed.length + 1,
+      `前=${before.unnamed.length} 後=${after.unnamed.length}`);
+    check("陽性対照: 読めない文字を足すと拾う", after.lowContrast.length === before.lowContrast.length + 1,
+      `前=${before.lowContrast.length} 後=${after.lowContrast.length}`);
+    check("陽性対照: 説明の無い図を足すと拾う", after.unlabeledFigures.length === before.unlabeledFigures.length + 1,
+      `前=${before.unlabeledFigures.length} 後=${after.unlabeledFigures.length}`);
+    const noRing = await focusRing(page);
+    check("陽性対照: 焦点の輪を消すと拾う", noRing.moved && !noRing.visible, JSON.stringify(noRing));
+    await page.evaluate(() => {
+      document.getElementById("__a11y_control")?.remove();
+      document.getElementById("__a11y_control_style")?.remove();
+    });
 
     console.log("画面幅");
     // 320 は SPEC G-15 が指定する最小幅。最初は 360 までしか測っていなかった。

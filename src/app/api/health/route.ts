@@ -7,6 +7,6 @@ export function GET() {
     status: "ok",
     version: "0.1.0",
     dataVersion: manifest.version,
-    stage: manifest.stage,
+    shipped: manifest.shipped,
   });
 }

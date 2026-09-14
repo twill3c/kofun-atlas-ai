@@ -59,6 +59,25 @@ def fixtures_dir() -> pathlib.Path:
 
 
 @pytest.fixture(scope="session")
+def require_module():
+    """検査が読むモジュールが無いとき、手元では skip・CI では失敗にする。
+
+    `pytest.importorskip` をそのまま使うと、CI で依存を入れ忘れても skip で緑になる
+    (G-08 の ONNX 照合 3 件がそうなっていた・2026-09-15)。
+    """
+
+    def _require(name: str):
+        if os.environ.get("KOFUN_REQUIRE_ARTIFACTS"):
+            try:
+                return __import__(name)
+            except ImportError as error:
+                pytest.fail(f"{name} が無い(pip install -e '.[dev,validate]'): {error}")
+        return pytest.importorskip(name)
+
+    return _require
+
+
+@pytest.fixture(scope="session")
 def require_artifact():
     """生成物が無いとき、手元では skip・CI では失敗にする。"""
 

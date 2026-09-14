@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,validate]"
 
       # 出荷物を作る工程を CI でも一度通す。
       # CSV はリポジトリに入っているので取得は起きない。

@@ -76,7 +76,7 @@ def test_t055_positive_control_shuffled_layout_is_clearly_worse(metrics):
 
 
 def test_t055_recomputed_trustworthiness_matches_the_recorded_value(
-    projection, embeddings, metrics
+    projection, embeddings, metrics, require_module
 ):
     """記録した数値を、**実際に配った座標**から計算し直して突き合わせる(HC-152)。
 
@@ -85,6 +85,7 @@ def test_t055_recomputed_trustworthiness_matches_the_recorded_value(
     実測 2026-09-10 で差は 3.5e-6。許容差はこの実測から置いた —— 丸めた後の
     値で確かめる、という規律の一部である(HC-240)。
     """
+    require_module("sklearn")  # 無ければ手元は skip・CI は失敗(validate 追加依存)
     from sklearn.manifold import trustworthiness
 
     emb = np.asarray(embeddings["embeddings"], dtype=float)

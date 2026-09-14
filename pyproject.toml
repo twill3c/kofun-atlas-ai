@@ -17,6 +17,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# 検査が読むが、パイプラインは要らないもの。CI はこれも入れる。
+# 入れないと G-08(ONNX の照合)は skip になって緑に見え、G-24(trustworthiness の再計算)は import で落ちる
+# (2026-09-15、新しい clone に CI を再現して見つけた)。
+validate = ["onnxruntime>=1.20", "scikit-learn>=1.5"]
 
 [tool.setuptools]
 packages = ["kofun_atlas"]

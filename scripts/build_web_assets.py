@@ -120,8 +120,11 @@ def main() -> int:
     manifest = {
         "version": dt.date.today().isoformat(),
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        # stage は「どの成果物まで数えたか」(L0〜L4)であって、ループの進み具合ではない。画面には出さない
+        # (L7 でトップページが「いまの状態(L4)」のまま L6 まで残っていた)。
         "stage": stage,
-        "shipped": False,
+        # 公開したら True。L7(2026-09-15)で Vercel に配る
+        "shipped": True,
         "counts": {
             "geoshape_rows": geoshape_manifest["kofun_candidates"],
             "merged_duplicate_rows": sum(

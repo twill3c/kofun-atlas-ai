@@ -1,0 +1,22 @@
+# Vercel に送らないもの。パターンは先頭を / で固定する(無印は深い階層にも当たり public/data を消しうる)。
+# 送る中身は 2026-09-15 に実測した: data/ 993 MB(うち標高タイルのキャッシュ)・.venv 1.2 GB・node_modules 456 MB。
+# ビルドが読むのは src/ public/ と data/derived/ の指標ファイル(作り方のページが import する)だけ。
+/.venv/
+/.venv-ci/
+/node_modules/
+/.next/
+/out/
+/artifacts/
+/.pytest_cache/
+/.wt/
+/.env*
+/.vercel/
+/data/raw/
+/data/interim/
+/data/processed/
+/logs/
+/ml/
+/tests/
+/harness/
+/scripts/
+/kofun_atlas/

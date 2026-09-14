@@ -99,6 +99,22 @@ h1 {
   font-weight: 600;
 }
 
+/* トップの入口。各行は「ボタン + 何ができるか」。狭い幅では説明がボタンの下に回る */
+.cta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.cta-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
 /* 地図ページ: 狭い画面では縦に積む。横に溢れさせない(HC-078)。 */
 .map-layout {
   display: grid;

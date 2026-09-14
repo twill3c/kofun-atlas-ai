@@ -55,8 +55,8 @@ describe("data-manifest.json", () => {
     expect(total).toBe(manifest.counts.with_prefecture);
   });
 
-  it("出荷前であることが明示されている", () => {
-    // L5 まで出荷しない。ここが true に変わるのは意図した変更のときだけ。
-    expect(typeof manifest.shipped).toBe("boolean");
+  it("公開したことが明示されている", () => {
+    // L7(2026-09-15)で公開する。false に戻るのは意図した変更のときだけ。
+    expect(manifest.shipped).toBe(true);
   });
 });

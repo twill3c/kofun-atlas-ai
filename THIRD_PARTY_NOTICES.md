@@ -20,6 +20,10 @@ Structured data from Wikidata, CC0
 https://www.wikidata.org/wiki/Wikidata:Licensing
 ```
 
+**V1.0 では取り込んでいない。** `query.wikidata.org/robots.txt` が `/sparql` を Disallow しているため
+自動取得をやめ、人手スナップショットの手順だけを `data/raw/wikidata/README.md` に置いた。
+スナップショットは置かれておらず、出荷物に Wikidata 由来の値は 0 件である。
+
 ## 国土地理院 / Geospatial Information Authority of Japan
 
 ```text
@@ -32,7 +36,13 @@ https://www.gsi.go.jp/
 逆ジオコーディングに国土地理院の
 「簡易逆ジオコーディングサービス」を利用
 市区町村名は国土地理院地図の市区町村表を利用
+
+地図の背景に国土地理院「淡色地図」（地理院タイル）を表示
+https://maps.gsi.go.jp/development/ichiran.html
 ```
+
+淡色地図のタイルは同梱せず、閲覧時にブラウザが国土地理院から直接取得する。
+地図の右下に「国土地理院」の出典を表示している。
 
 同梱: `data/raw/gsi/muni.js`（市区町村表）と `data/raw/gsi/revgeo.jsonl`
 （古墳座標に対する逆ジオコーディング結果・2026-09-08 取得）。
@@ -54,9 +64,11 @@ https://www.gsi.go.jp/
 出典：文化庁「国指定文化財等データベース」
 https://kunishitei.bunka.go.jp/bsys/index
 
-文字情報を出典表示のうえ利用している。
 画像は第三者が権利を有するため一切転載しない。
 ```
+
+**V1.0 では取り込んでいない。** 人手スナップショットの手順だけを `data/raw/bunka/README.md` に置いた。
+スナップショットは置かれておらず、出荷物に文化庁由来の値は 0 件である。
 
 ## 全国遺跡報告総覧 / 奈良文化財研究所
 
@@ -72,3 +84,13 @@ https://zenkoku-kofun.nara-hgis.jp/zenkoku_kofun_home.html
 学術研究目的に限定され、改変・再配布が禁止されている。
 本プロジェクトはデータを取り込まず、参照 URL を記すにとどめる。
 ```
+
+## ブラウザに配るライブラリ
+
+| ライブラリ | 版 | ライセンス |
+|---|---|---|
+| MapLibre GL JS | 5.24.0 | BSD-3-Clause（`node_modules/maplibre-gl/LICENSE.txt`） |
+| Next.js | 15.5.25 | MIT |
+| React / React DOM | 19.2.8 | MIT |
+
+版は 2026-09-15 に `node_modules` の `package.json` から読んだ。

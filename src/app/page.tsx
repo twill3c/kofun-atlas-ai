@@ -11,7 +11,7 @@ const prefectures = manifest.prefectures as Record<string, number>;
  * 描画本文を harness/smoke.mjs が走査して 0 件であることを確かめる)。
  */
 export default function Home() {
-  const { counts, sources, version, stage } = manifest;
+  const { counts, sources, version } = manifest;
   const geoshape = sources.find((s) => s.id === "geoshape");
   const topPrefectures = Object.entries(prefectures)
     .sort((a, b) => b[1] - a[1])
@@ -21,11 +21,26 @@ export default function Home() {
     <div className="wrap">
       <h1>Kofun Atlas AI</h1>
       <p className="lede">日本古墳時空間・地形・AI 分析アトラス</p>
-      <p>
-        <a className="cta" href="/map/">
-          地図で古墳を見る →
-        </a>
-      </p>
+      <ul className="cta-list">
+        <li>
+          <a className="cta" href="/map/">
+            地図で古墳を見る →
+          </a>
+          <span className="note">都道府県で絞る・名前で探す・立地の似た古墳を出す</span>
+        </li>
+        <li>
+          <a className="cta" href="/explore/">
+            立地を探索する →
+          </a>
+          <span className="note">立地の二次元配置と縮小地図を並べ、地形の値で塗る</span>
+        </li>
+        <li>
+          <a className="cta" href="/compare/">
+            都道府県を比べる →
+          </a>
+          <span className="note">収録件数と地形の中央値の表</span>
+        </li>
+      </ul>
 
       <div className="card">
         <h2>採録範囲</h2>
@@ -39,9 +54,9 @@ export default function Home() {
       </div>
 
       <div className="card">
-        <h2>いまの状態（{stage}）</h2>
+        <h2>データの埋まり具合</h2>
         <p className="note">
-          このアプリは段階的に作っています。埋まっていない欄は推測で埋めず、空のまま置いています。
+          埋まっていない欄は推測で埋めず、空のまま置いています。
         </p>
         <ul>
           <li>座標あり: {nf.format(counts.with_coordinates)} 件</li>
@@ -54,7 +69,7 @@ export default function Home() {
           <li>築造時期あり: {nf.format(counts.with_chronology)} 件</li>
         </ul>
         <p className="note">
-          地図と「立地の似た古墳」の検索は、上の「地図で古墳を見る」から使えます。二次元配置の探索画面はこれから作ります。
+          墳形と築造時期は、再配布できる公開データでは 1 件も埋まっていません。そのため墳形・時期による絞り込みや比較は出していません。
         </p>
       </div>
 

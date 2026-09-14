@@ -42,12 +42,12 @@ def embeddings(project_root, require_artifact):
 
 
 @pytest.fixture(scope="module")
-def onnx_session(project_root, require_artifact):
+def onnx_session(project_root, require_artifact, require_module):
     path = require_artifact(
         project_root / "public" / "models" / "kofun_encoder.onnx",
         "`python ml/export_onnx.py` を先に実行すること",
     )
-    ort = pytest.importorskip("onnxruntime")
+    ort = require_module("onnxruntime")
     return ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
 
 
