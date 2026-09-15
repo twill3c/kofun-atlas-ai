@@ -506,6 +506,7 @@ tippecanoe / pmtiles の CLI はこの環境に無く、Vercel での Range 配�
 | GitHub Actions の最初の実行 | run 34900988678 は **web ジョブが failure** —— `pnpm/action-setup` の `version: 10` と `package.json` の `packageManager` の二重指定。新しい clone での再現は `run:` の行しかなぞらず、action の入力検査は再現できなかった。直した run 34901238304 で 3 ジョブとも success。二重指定は T-075 で静的に拾う |
 | Vercel | CLI の初回デプロイで GitHub 連携が自動で張られた。以後 `main` への push が本番に出る |
 | 本番の検品(T-072 ほか) | データ 5 ファイルと 6 ページの描画本文が手元の `out/` と一致したうえで 170 件 OK |
+| タッチ端末(loop_008) | app-menu の「スマホ対応」を名乗る前に本番へタッチ端末の探針を当てると 10/11。探索画面の散布図は点をタップしても名前が出なかった(ホバーが無く、`onPointerDown` が大きさ 0 の範囲選択を始め、指を離すと `pointerleave` で消していた)。§3.14 にタップの規則を足して直し(526150b)、本番の探針 11/11・検品器 175 件 OK。app-menu は `mobile: true` |
 | `/api/health` | 初回は `application/octet-stream` で配られた(静的書き出しは拡張子の無いファイルに MIME を付けない)。`vercel.json` で JSON を付け、本番の検品に項目を足した。push(c9b8c1d)で配り直した本番で `application/json` を確かめ、本番の検品は 171 件 OK。CI run 34901728552 も 3 ジョブ success |
 
 ## 4. データ源と採用可否
