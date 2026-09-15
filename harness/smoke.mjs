@@ -45,7 +45,11 @@ const CANON = {
   github: "https://github.com/twill3c/kofun-atlas-ai",
   license: "https://github.com/twill3c/kofun-atlas-ai/blob/main/LICENSE",
   appMenu: "https://app-menu-amber.vercel.app",
+  // 解説アーティファクト(loop_009 で発行。発行時に返った URL)
+  guide: "https://claude.ai/artifact/3xenPQnvadKrCqqgETCkSg",
+  blueprint: "https://claude.ai/artifact/Rvj7XR1iAB2mvuWyEbWXCc",
 };
+const FOOTER_ORDER = ["MIT License", "GitHub", "古墳アトラスの歩き方", "古墳アトラスの設計図", "App Menu"];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -950,7 +954,12 @@ async function main() {
     const footer = await page.evaluate(() => {
       const f = document.querySelector(".fleet-footer");
       return f
-        ? { fixed: getComputedStyle(f).position, links: [...f.querySelectorAll("a")].map((a) => [a.innerText.trim(), a.href]) }
+        ? {
+          fixed: getComputedStyle(f).position,
+          links: [...f.querySelectorAll("a")].map((a) => [a.innerText.trim(), a.href]),
+          // 区切りは文字の「・」で置いている(::before で描くと innerText に出ず検品から見えない)
+          seps: (f.innerText.match(/・/g) ?? []).length,
+        }
         : null;
     });
     check("フッタがある", !!footer);
@@ -960,6 +969,14 @@ async function main() {
       check("GitHub がこのリポジトリを指す", href("GitHub") === CANON.github, String(href("GitHub")));
       check("MIT License が LICENSE を指す", href("MIT License") === CANON.license, String(href("MIT License")));
       check("App Menu が本番を指す", href("App Menu") === CANON.appMenu, String(href("App Menu")));
+      check("歩き方がこのアプリの解説アーティファクトを指す", href("古墳アトラスの歩き方") === CANON.guide,
+        String(href("古墳アトラスの歩き方")));
+      check("設計図がこのアプリの解説アーティファクトを指す", href("古墳アトラスの設計図") === CANON.blueprint,
+        String(href("古墳アトラスの設計図")));
+      const labels = footer.links.map(([t]) => t);
+      check("フッタが規約の 5 項目をこの並びで持ち、あいだの区切りが 4 つ",
+        JSON.stringify(labels) === JSON.stringify(FOOTER_ORDER) && footer.seps === 4,
+        `並び=${JSON.stringify(labels)} 区切り=${footer.seps}`);
     }
 
     check("同じ配信元で 4xx/5xx になった資源が無い", badSameOrigin.length === 0, JSON.stringify(badSameOrigin.slice(0, 3)));
