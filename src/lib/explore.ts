@@ -61,6 +61,37 @@ export function fromUser(ux: number, uy: number): [number, number] {
   return [((ux - PAD) / span) * 2 - 1, (1 - (uy - PAD) / span) * 2 - 1];
 }
 
+// --- 指し示し(SPEC §3.14「タップ」) ---
+
+/** 最寄り点として拾う距離の上限(描画単位・この値ちょうどは含まない)。 */
+export const NEAREST_MAX = 14;
+/** 押してから離すまでの移動がこれ未満(x・y とも)ならタップ。 */
+export const TAP_MAX_MOVE = 2;
+
+/** 距離の二乗が最小の点の番号。同じ距離なら番号の小さい方。上限未満に点が無ければ null。 */
+export function nearestIndex(
+  points: ReadonlyArray<readonly [number, number]>,
+  ux: number,
+  uy: number,
+  maxDistance = NEAREST_MAX,
+): number | null {
+  let best: number | null = null;
+  let bestD = maxDistance * maxDistance;
+  for (let i = 0; i < points.length; i++) {
+    const d = (points[i][0] - ux) ** 2 + (points[i][1] - uy) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** 範囲選択の始点と終点が x・y とも TAP_MAX_MOVE 未満しか離れていなければタップ。 */
+export function isTap(b: { ux0: number; uy0: number; ux1: number; uy1: number }): boolean {
+  return Math.abs(b.ux1 - b.ux0) < TAP_MAX_MOVE && Math.abs(b.uy1 - b.uy0) < TAP_MAX_MOVE;
+}
+
 /**
  * 中心間の距離が直径未満になる相手を持つ点の割合。
  * 距離も半径も同じ比で拡大縮小されるので、描画単位で測れば画面の大きさに依らない。

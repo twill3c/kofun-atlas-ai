@@ -800,6 +800,63 @@ async function main() {
     check("比較表に「実在する古墳の数ではない」と書いてある",
       (await page.locator("body").innerText()).includes("実在する古墳の数ではありません"));
 
+    // --- タッチ端末の探索画面(T-077)。タッチにはホバーが無い(本番の探針で点をタップしても名前が出なかった) ---
+    console.log("タッチ端末(探索)");
+    const touchCtx = await browser.newContext({
+      viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+    });
+    try {
+      const touch = await touchCtx.newPage();
+      await touch.goto(`${base}/explore/`, { waitUntil: "domcontentloaded" });
+      await touch.waitForFunction(() => document.querySelectorAll(".scatter svg circle[data-i]").length > 0, null,
+        { timeout: RENDER_DEADLINE_MS }).catch(() => {});
+      await touch.locator(".scatter svg").scrollIntoViewIfNeeded();
+      const spots = await touch.evaluate(() => {
+        const svg = document.querySelector(".scatter svg");
+        const circles = [...svg.querySelectorAll("circle[data-i]")].map((c) => [Number(c.getAttribute("cx")), Number(c.getAttribute("cy"))]);
+        const view = Number(svg.dataset.view);
+        const pad = Number(svg.dataset.pad);
+        const screen = (ux, uy) => {
+          const p = new DOMPoint(ux, uy).matrixTransform(svg.getScreenCTM());
+          return { x: p.x, y: p.y, ux, uy };
+        };
+        // 点のある所: 最初の点の中心
+        const onPoint = screen(circles[0][0], circles[0][1]);
+        // 点の無い所: 最寄り点まで描画単位 30 以上ある格子点(14 の外に余裕をとる)
+        let empty = null;
+        for (let uy = pad; uy <= view - pad && !empty; uy += 6) {
+          for (let ux = pad; ux <= view - pad; ux += 6) {
+            if (circles.every(([x, y]) => (x - ux) ** 2 + (y - uy) ** 2 >= 30 * 30)) {
+              empty = screen(ux, uy);
+              break;
+            }
+          }
+        }
+        return { onPoint, empty, view, pad };
+      });
+      await touch.touchscreen.tap(spots.onPoint.x, spots.onPoint.y);
+      const tapName = await touch.locator(".tooltip strong").textContent({ timeout: 5000 }).catch(() => null);
+      // 期待は SPEC §3.14 の式から独立に: タップした位置から 14 以内に、その名前を持つ点がある
+      const tSpan = spots.view - 2 * spots.pad;
+      const tapNearby = tapName !== null && explore.xy.some(([x, y], i) => explore.name[i] === tapName
+        && Math.hypot(spots.pad + ((x + 1) / 2) * tSpan - spots.onPoint.ux, spots.pad + (1 - (y + 1) / 2) * tSpan - spots.onPoint.uy) < 14);
+      check("タッチ: 散布図の点をタップすると、その位置の近くの古墳の名前が出る", tapNearby, `出た名前=${tapName}`);
+      await touch.waitForTimeout(800);
+      check("タッチ: 出た名前は指を離した後も残る(pointerleave で消えない)",
+        (await touch.locator(".tooltip strong").count()) === 1);
+      check("タッチ: タップでは範囲選択の枠が出ない", (await touch.locator(".scatter rect.brush").count()) === 0);
+      if (spots.empty) {
+        await touch.touchscreen.tap(spots.empty.x, spots.empty.y);
+        await touch.waitForTimeout(300);
+        check("陽性対照: 点の無い所をタップすると名前が消える", (await touch.locator(".tooltip strong").count()) === 0,
+          `タップした位置 ux=${spots.empty.ux} uy=${spots.empty.uy}`);
+      } else {
+        check("陽性対照: 点の無い所をタップすると名前が消える", false, "最寄り点から 30 以上離れた位置が見つからない");
+      }
+    } finally {
+      await touchCtx.close();
+    }
+
     console.log("アクセシビリティ");
     for (const route of ["/", "/map/", "/explore/", "/compare/", "/sources/", "/methodology/"]) {
       await page.setViewportSize({ width: 1280, height: 900 });

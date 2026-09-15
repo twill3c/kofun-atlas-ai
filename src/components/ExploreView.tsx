@@ -13,6 +13,8 @@ import {
   chooseRadius,
   classOf,
   fromUser,
+  isTap,
+  nearestIndex,
   quantileBreaks,
   selectInRect,
   toUser,
@@ -127,18 +129,7 @@ export default function ExploreView() {
     return [Math.min(VIEW, Math.max(0, p.x)), Math.min(VIEW, Math.max(0, p.y))] as [number, number];
   };
 
-  const nearest = (ux: number, uy: number) => {
-    let best = -1;
-    let bestD = 14 * 14; // 描画単位で 14 以内の最寄り点だけを拾う
-    userXY.forEach(([x, y], i) => {
-      const d = (x - ux) ** 2 + (y - uy) ** 2;
-      if (d < bestD) {
-        bestD = d;
-        best = i;
-      }
-    });
-    return best >= 0 ? best : null;
-  };
+  const nearest = (ux: number, uy: number) => nearestIndex(userXY, ux, uy);
 
   const tableRows = useMemo(() => {
     if (!data || !selected) return [];
@@ -211,7 +202,7 @@ export default function ExploreView() {
             data-pad={PAD}
             data-radius={radius}
             role="img"
-            aria-label="立地の二次元配置。近い点どうしは立地が似ている。ドラッグで範囲を選べる"
+            aria-label="立地の二次元配置。近い点どうしは立地が似ている。ドラッグで範囲を選べ、点をタップすると名前が出る"
             onPointerDown={(e) => {
               const p = toSvgPoint(e);
               if (!p) return;
@@ -225,11 +216,20 @@ export default function ExploreView() {
               if (dragging) setBrush((b) => (b ? { ...b, ux1: p[0], uy1: p[1] } : b));
               else setHover(nearest(p[0], p[1]));
             }}
-            onPointerUp={() => {
+            onPointerUp={(e) => {
               setDragging(false);
-              setBrush((b) => (b && Math.abs(b.ux1 - b.ux0) < 2 && Math.abs(b.uy1 - b.uy0) < 2 ? null : b));
+              if (brush && isTap(brush)) {
+                // タップ: 範囲選択にせず、離した位置の最寄り点の名前を固定して出す。点が無ければ消す(SPEC §3.14)。
+                // タッチにはホバーが無いので、これが名前を見る唯一の手段になる
+                setBrush(null);
+                const p = toSvgPoint(e);
+                setHover(p ? nearest(p[0], p[1]) : null);
+              }
             }}
-            onPointerLeave={() => setHover(null)}
+            onPointerLeave={(e) => {
+              // タッチとペンは指を離した直後に pointerleave が来る。そこで消すと、タップで出した名前が一瞬で消える
+              if (e.pointerType === "mouse") setHover(null);
+            }}
           >
             <rect x={0} y={0} width={VIEW} height={VIEW} className="plot-surface" />
             <g className="points">
