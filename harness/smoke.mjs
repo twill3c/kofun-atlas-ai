@@ -264,7 +264,11 @@ async function waitForRenderedPoints(page, deadlineMs) {
     await page.waitForFunction(
       () => {
         const m = window.__kofunMap;
-        return !!m && m.isStyleLoaded() && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
+        // 層が在るかを先に聞く。無い層を queryRenderedFeatures で問うと MapLibre が error を発火し、
+        // 画面はそれを role=alert の文として出す —— 検品器の問い合わせが検品対象の本文を書き換える
+        // (loop_009: 本番の同一性検査で手元の /map/ にだけ「The layer 'kofun-points' does not exist…」が出た)
+        return !!m && m.isStyleLoaded() && !!m.getLayer("kofun-points")
+          && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
       },
       null,
       { timeout: deadlineMs, polling: 100 },

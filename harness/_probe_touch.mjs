@@ -39,7 +39,9 @@ try {
   await page.goto(`${BASE}/map/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => {
     const m = window.__kofunMap;
-    return !!m && m.isStyleLoaded() && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
+    // 層が在るかを先に聞く(無い層を問うと MapLibre が error を出し、画面がそれを表示する)
+    return !!m && m.isStyleLoaded() && !!m.getLayer("kofun-points")
+      && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
   }, null, { timeout: 30000 }).catch(() => {});
 
   const name = points.features[0].properties.name;
@@ -61,7 +63,9 @@ try {
   await page.goto(`${BASE}/map/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => {
     const m = window.__kofunMap;
-    return !!m && m.isStyleLoaded() && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
+    // 層が在るかを先に聞く(無い層を問うと MapLibre が error を出し、画面がそれを表示する)
+    return !!m && m.isStyleLoaded() && !!m.getLayer("kofun-points")
+      && m.queryRenderedFeatures({ layers: ["kofun-points"] }).length > 0;
   }, null, { timeout: 30000 }).catch(() => {});
   const target = await page.evaluate(() => {
     const m = window.__kofunMap;
